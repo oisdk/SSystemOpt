@@ -1,0 +1,76 @@
+name:                SSystems
+version:             0.1.0.0
+-- synopsis:
+-- description:
+-- homepage:
+license:             MIT
+license-file:        LICENSE
+author:              Donnacha Oisin Kidney
+maintainer:          oisin.kidney@gmail.com
+-- copyright:
+-- category:            Web
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Expr
+                     , Solver
+                     , SSystem
+                     , CosmoABC
+                     , Utils
+                     , Parse
+  other-extensions:    DeriveFunctor
+                     , TypeFamilies
+                     , DeriveFoldable
+                     , LambdaCase
+                     , OverloadedStrings
+  build-depends:       base >= 4.7 && < 5
+                     , recursion-schemes
+                     , free
+                     , turtle
+                     , text
+                     , Cabal
+                     , parsec
+                     , mtl
+                     , containers
+                     , binary
+  ghc-options:         -Wall
+  default-language:    Haskell2010
+
+executable configure
+  hs-source-dirs:      app
+  main-is:             Configure.hs
+  build-depends:       base >= 4.7 && < 5
+                     , SSystems
+                     , turtle
+                     , text
+                     , binary
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+  default-language:    Haskell2010
+
+
+executable simulate
+  hs-source-dirs:      app
+  main-is:             Simulate.hs
+  build-depends:       base >= 4.7 && < 5
+                     , SSystems
+                     , containers
+                     , text
+                     , turtle
+                     , binary
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+  default-language:    Haskell2010
+
+Test-Suite ssystems-tests
+  Type:                exitcode-stdio-1.0
+  main-is:             test/ssystems-tests.hs
+  build-depends:       base
+                     , QuickCheck
+                     , SSystems >= 0.1
+                     , text
+                     , binary
+  default-language:    Haskell2010
