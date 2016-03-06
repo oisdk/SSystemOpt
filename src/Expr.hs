@@ -33,7 +33,7 @@ module Expr
 
 import           Control.Comonad.Cofree
 import           Control.Monad          ((<=<))
-import           Data.Binary
+import           Data.Serialize
 import           Data.Functor           (void)
 import           Data.Functor.Foldable  hiding (Foldable, fold, unfold)
 import qualified Data.Functor.Foldable  as F
@@ -81,15 +81,15 @@ data ExprF r = CstF Double
 -- An Expression type
 newtype Expr = Expr { getExpr :: Fix ExprF } deriving (Eq, Generic)
 
-instance Binary Expr where
+instance Serialize Expr where
   put = cata alg . getExpr where
     alg = \case
-      CstF d   -> put (0 :: Word8) >> put d
-      FncF f x -> put (1 :: Word8) >> put f >> x
-      NegF x   -> put (2 :: Word8) >> x
-      PowF x y -> put (3 :: Word8) >> x >> y
-      PrdF x y -> put (4 :: Word8) >> x >> y
-      SumF x y -> put (5 :: Word8) >> x >> y
+      CstF d   -> putWord8 0 >> put d
+      FncF f x -> putWord8 1 >> put f >> x
+      NegF x   -> putWord8 2 >> x
+      PowF x y -> putWord8 3 >> x >> y
+      PrdF x y -> putWord8 4 >> x >> y
+      SumF x y -> putWord8 5 >> x >> y
   get = Expr <$> anaM (const (getWord8 >>= alg)) () where
     alg = \case
       0 -> CstF <$> get
@@ -113,7 +113,7 @@ data Func = Sin
           | Tnh
           deriving (Eq, Ord, Enum, Bounded, Generic)
 
-instance Binary Func
+instance Serialize Func
 -- Applies a function to a value
 appF :: Func -> Double -> Double
 appF = \case

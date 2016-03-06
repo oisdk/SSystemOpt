@@ -4,13 +4,14 @@ module Main where
 
 import           Control.Applicative
 import           Control.Arrow       ((***))
-import           Data.Binary
+import           Data.Serialize
 import           Data.Map.Strict     (Map, fromList, lookup)
 import           Data.Maybe          (fromMaybe)
 import           Data.Text           (break, pack, split, tail, unpack)
 import           Data.Text.Read      (double)
 import           Prelude             hiding (FilePath, break, lines, lookup,
                                       tail, words)
+import qualified Data.ByteString as ByteString
 import           Solver
 import           SSystem
 import           Turtle
@@ -25,6 +26,7 @@ sureLookup k m = fromMaybe (error $ "Key " ++ show k ++ " not found in map: " ++
 main :: IO ()
 main = stdout $ do
   file <- options "Simulation" (argPath "Path" "Path to serialized model")
-  model <- liftIO $ decodeFile (unpack $ format fp file)
+  modelCode <- liftIO $ ByteString.readFile (unpack $ format fp file)
+  model <- either (die . pack) pure (decode modelCode)
   dict <- either (die . pack) pure . parseVars =<< stdin
   runSolver $ withParams (`sureLookup` dict) model

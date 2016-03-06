@@ -3,12 +3,13 @@
 module Main where
 
 import           CosmoABC
-import           Data.Binary
+import           Data.Serialize
 import           Data.Text   (unpack, concat)
 import           Parse       (parseSystem)
 import           Prelude     hiding (FilePath, concat)
 import           SSystem
 import           Turtle
+import qualified Data.ByteString as ByteString
 
 optOptions :: Parser (Int, Int, Double, Double, Maybe FilePath)
 optOptions = (,,,,) <$> optInt "Particles" 'p' "Number of particles in each particle system"
@@ -28,7 +29,7 @@ main = sh $ do
   touch mdl
   let parsed = parseSystem (maybe "SSystem code from stdin" (unpack . format fp) l) modelCode -- Parses model code
   model <- either (die . repr) pure parsed -- Converts Either ParseError Configurable to IO Configurable (with errors)
-  liftIO $ encodeFile (unpack $ format fp mdl) model -- Encodes model
+  liftIO $ ByteString.writeFile (unpack $ format fp mdl) (encode model)-- Encodes model
   let cfg = "/Users/oisinkidney/Desktop/Code/SSystemOpt/Working/config"
   cfgexists <- testpath cfg
   when cfgexists (rm cfg)

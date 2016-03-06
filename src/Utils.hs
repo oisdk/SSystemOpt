@@ -9,6 +9,9 @@ module Utils
   , evalState
   , insertUnique
   , symmetricDifferenceWith
+  , bool
+  , iterEnd
+  , ensure
   ) where
 
 import           Data.Bifunctor (bimap)
@@ -55,3 +58,13 @@ symmetricDifferenceWith :: Ord k
                         -> Map.Map k b
                         -> Map.Map k c
 symmetricDifferenceWith f g = Map.mergeWithKey (\_ _ _ -> Nothing) (Map.map f) (Map.map g)
+
+bool :: a -> a -> Bool -> a
+bool t _ True  = t
+bool _ f False = f
+
+iterEnd :: (a -> Maybe a) -> a -> [a]
+iterEnd f = g where g x = x : maybe [] g (f x)
+
+ensure :: (a -> Bool) -> a -> Maybe a
+ensure p x = bool (Just x) Nothing (p x)

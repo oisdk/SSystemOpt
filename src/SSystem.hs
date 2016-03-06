@@ -16,7 +16,7 @@ module SSystem
  ) where
 
 import           Data.Either    (rights)
-import           Data.Binary
+import           Data.Serialize
 import           Expr
 import           GHC.Generics
 -- | A PTerm is either a constant, or a variable to the power of some
@@ -25,13 +25,13 @@ import           GHC.Generics
 data PTerm d = C Double | String :^: d
   deriving (Functor, Foldable, Traversable, Show, Eq, Generic)
 
-instance Binary d => Binary (PTerm d)
+instance Serialize d => Serialize (PTerm d)
 
 data InitialDeclaration = ID { idName :: String
                              , idExpr :: Expr
                              } deriving (Eq, Generic)
 
-instance Binary InitialDeclaration
+instance Serialize InitialDeclaration
 
 instance Show InitialDeclaration where
   show (ID n e) = n ++ " = " ++ show e
@@ -45,14 +45,14 @@ data PowerLawForm d = PLawF { derivOf :: String
                             , right   :: [PTerm d]
                             } deriving (Eq, Functor, Foldable, Traversable, Show, Generic)
 
-instance Binary d => Binary (PowerLawForm d)
+instance Serialize d => Serialize (PowerLawForm d)
 
 -- | An SSystem is the standard SSystem
 data SSystem d = SSystem { sinits :: [InitialDeclaration]
                          , system :: [PowerLawForm d]
                          } deriving (Eq, Functor, Foldable, Traversable, Show, Generic)
 
-instance Binary d => Binary (SSystem d)
+instance Serialize d => Serialize (SSystem d)
 
 data Parameter = Param { max :: Double
                        , min :: Double
@@ -60,7 +60,7 @@ data Parameter = Param { max :: Double
                        , nam :: String
                        } deriving (Eq, Show, Generic)
 
-instance Binary Parameter
+instance Serialize Parameter
 
 data Configurable a = Configurable { getConfig  :: SSystem a
                                    , startTimeC :: Double
@@ -70,7 +70,7 @@ data Configurable a = Configurable { getConfig  :: SSystem a
                                    , numSteps   :: Double
                                    } deriving (Eq, Functor, Show, Generic)
 
-instance Binary a => Binary (Configurable a)
+instance Serialize a => Serialize (Configurable a)
 
 type Simulation = Configurable Double
 

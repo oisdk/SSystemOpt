@@ -1,12 +1,12 @@
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Main where
 
 import           Control.Arrow
+import           Control.Comonad
 import           Control.Monad
-import           Data.Binary              (decode, encode)
-import           Data.Functor
+import           Data.Serialize           (Serialize, decode, encode)
 import           Data.Text                (Text)
 import           Expr
 import           Parse
@@ -16,6 +16,9 @@ import           SSystem
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
+import           Utils
+import           Zipper
+import Control.Applicative
 
 instance Arbitrary Func where arbitrary = arbitraryBoundedEnum
 
@@ -56,11 +59,23 @@ instance Arbitrary a => Arbitrary (Configurable a) where
                            <*> arbitrary
                            <*> arbitrary
 
-prop_binaryIdExpr :: Expr -> Bool
-prop_binaryIdExpr = isId (decode . encode)
+instance Arbitrary a => Arbitrary (Zipper a) where
+  arbitrary = Z <$> arbitrary <*> arbitrary <*> arbitrary
 
-prop_binaryIdConfig :: Configurable (Either Double Parameter) -> Bool
-prop_binaryIdConfig = isId (decode . encode)
+prop_ExtDup :: Zipper Int -> Bool
+prop_ExtDup = isId (extract . duplicate)
+
+prop_FExtDup :: Zipper Int -> Bool
+prop_FExtDup = isId (fmap extract . duplicate)
+
+prop_DupDup :: Zipper Int -> Bool
+prop_DupDup = sameResult (duplicate . duplicate) (fmap duplicate . duplicate)
+
+prop_binaryIdExpr :: Expr -> P.Result
+prop_binaryIdExpr = encodeDecode
+
+prop_binaryIdConfig :: Configurable (Either Double Parameter) -> P.Result
+prop_binaryIdConfig = encodeDecode
 
 prop_basicDecl :: Property
 prop_basicDecl = eachOf exampleInits (uncurry (parseTestProp initialAssign))
@@ -118,21 +133,29 @@ exampleDerivs = [ (PLawF x1 [c x6, c x7] [c x3]
 
 eachOf :: [a] -> (a -> P.Result) -> Property
 eachOf l t = once $ foldr f P.succeeded l where
-  f e a = maybe a (\p -> if p then a else r) (P.ok r) where r = t e
+  f e a = maybe a (bool a r) (P.ok r) where r = t e
 
 isId :: Eq a => (a -> a) -> a -> Bool
-isId f x = f x == x
+isId f x = x == f x
 -- Evil version:
 -- isId = (<*>) (==)
 
+encodeDecode :: (Serialize a, Eq a) => a -> P.Result
+encodeDecode e = either failWith (bool P.succeeded P.failed . (e==)) ((decode . encode) e)
+
+sameResult :: Eq a => (b -> a) -> (b -> a) -> b -> Bool
+sameResult = liftA2 (==)
+
 parseTestProp :: (Eq a, Show a) => ModelParser a -> a -> Text -> P.Result
-parseTestProp p e s = maybe P.succeeded (\r -> P.failed { P.reason = r } ) (parseTester p e s)
+parseTestProp p e s = maybe P.succeeded failWith (parseTester p e s)
 
 quickCheckExit :: Testable prop => prop -> IO Result
 quickCheckExit = resultExit <=< quickCheckResult where
   resultExit r@ Success{}  = pure r
   resultExit r = exitFailure $> r
 
+failWith :: String -> P.Result
+failWith r = P.failed { P.reason = r }
 
 return []
 runTests = $forAllProperties quickCheckExit
