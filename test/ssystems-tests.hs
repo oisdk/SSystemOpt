@@ -131,6 +131,11 @@ exampleDerivs = [ (PLawF x1 [c x6, c x7] [c x3]
   c v = v :^: Left 1
   (x1,x3,x4,x5,x6,x7) = ("x1","x3","x4","x5","x6","x7")
 
+ds = [3,3,3.5,3]
+cmpfnc ds a b = Just $ compare (d (toList b)) (d (toList a)) where d = mse ds
+prop_SearchM = Just ds == (toList <$> searchM (cmpfnc ds) (fromList [0,0,0,0]))
+
+toList = foldr (:) []
 eachOf :: [a] -> (a -> P.Result) -> Property
 eachOf l t = once $ foldr f P.succeeded l where
   f e a = maybe a (bool a r) (P.ok r) where r = t e

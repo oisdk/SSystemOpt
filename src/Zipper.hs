@@ -1,14 +1,19 @@
+{-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE DeriveFunctor #-}
-
 module Zipper where
 
 import           Control.Applicative.Backwards
 import           Control.Comonad
 import           Data.Foldable
+import           Data.Ord                      (comparing)
 import           Utils
-import Data.Monoid
-
+import Data.Maybe
+import Control.Monad
 data Zipper a = Z [a] a [a] deriving (Functor, Eq)
+
+data Bounds a = Bounds { maxB :: a
+                       , sucB :: a -> a
+                       } 
 
 instance Foldable Zipper where
   foldr f i (Z xs x ys) = foldl' (flip f) (f x (foldr f i ys)) xs
@@ -27,6 +32,9 @@ instance Show a => Show (Zipper a) where
       joinC [] = id
       joinC (x:xs) = x . foldr (\e a -> showString ", " . e . a) id xs
 
+instance Ord a => Ord (Zipper a) where
+  compare = comparing toList
+
 fromList :: [a] -> Zipper a
 fromList [] = error "Cannot make a zipper from an empty list"
 fromList (x:xs) = Z [] x xs
@@ -39,22 +47,59 @@ right :: Zipper a -> Maybe (Zipper a)
 right (Z _ _ []) = Nothing
 right (Z xs x (y:ys)) = Just (Z (x:xs) y ys)
 
+
+insert :: a -> Zipper a -> Zipper a
+insert x (Z xs y ys) = Z xs x (y:ys)
+
 instance Comonad Zipper where
   extract (Z _ x _) = x
   duplicate z = Z (tail $ iterEnd left z) z (tail $ iterEnd right z)
 
-children :: (Eq a, Enum a, Ord a) => Zipper a -> Zipper (Zipper a)
-children z@(Z _ c _) = next c ?? next (succ c) where
-  Z [] _ [] ?? x = x
-  x         ?? _ = x
-  next n = divg ((n>=) . extract) (centre succ <<= z)
-  divg p (Z xs y ys) = Z (filter p xs) z (filter p (y:ys))
+children :: Eq a => Bounds a -> Zipper a -> Zipper (Zipper a)
+children (Bounds m s) = liftA2 f (insert <*> extend (centre s)) extract where
+  f z c = g (filterZ ((c==) . extract) z) where
+    g (Z [] _ []) | c /= m = z
+    g r = r
+
+diverge :: (a -> a) -> Zipper a -> Zipper (Zipper a)
+diverge f = extend (centre f)
 
 centre :: (a -> a) -> Zipper a -> Zipper a
 centre f (Z xs x ys) = Z xs (f x) ys
 
-search :: (Enum a, Eq a, Ord a) => (Zipper a -> Zipper a -> Ordering) -> Zipper a -> Zipper a
-search cmp = search' where
-  search' = maxFind . children
-  maxFind (Z xs x ys) = maybe x search' (ensure ((LT==) . cmp x) =<< maxMaybe (maxMaybe Nothing ys) xs)
-  maxMaybe = foldr (\e -> Just . maybe e (bool e <*> (GT==) . cmp e))
+edges :: (a -> a) -> Zipper a -> Zipper a
+edges f (Z xs x ys) = Z (map f xs) x (map f ys)
+
+filterZ :: (a -> Bool) -> Zipper a -> Zipper a
+filterZ p (Z xs x ys) = Z (filter p xs) x (filter p ys)
+
+searchM :: (Enum a, Ord a, Monad m) 
+        => (Zipper a -> Zipper a -> m Ordering) 
+        -> Bounds a 
+        -> Zipper a 
+        -> m (Zipper a)
+searchM cmp b = search where
+  search = untilM (maxFind . children b)
+  maxMaybeM = flip (foldrM (fmap Just .: f)) where
+    f e = maybe (pure e) (maxM e)
+  maxM x y = bool y x . (LT==) <$> cmp x y
+  maxFind (Z xs x ys) = runMaybeT $ do
+    y <- MaybeT (maxMaybeM xs =<< maxMaybeM ys Nothing)
+    c <- lift (cmp x y)
+    guard (c == LT)
+    pure y
+
+mse :: [Double] -> [Double] -> Double
+mse = uncurry (/) .: foldl' sumInc (0,0) .: zipWith sqDiff where
+  sqDiff !a !b = let d = a - b in d * d
+  sumInc (!s,!n) !e = (s+e, n+1)
+
+newtype PosExp = PE { getPE :: Double } deriving (Eq, Ord, Show)
+
+instance Bounded PosExp where
+  minBound = PE 0
+  maxBound = PE 4
+
+instance Enum PosExp where
+  fromEnum = fromEnum . (2*) . getPE
+  toEnum = PE . (/2) . toEnum

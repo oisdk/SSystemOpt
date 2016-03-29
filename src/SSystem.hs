@@ -13,6 +13,7 @@ module SSystem
  , InitialDeclaration(..)
  , withParams
  , justParams
+ , simulationVal
  ) where
 
 import           Data.Either    (rights)
@@ -76,6 +77,9 @@ type Simulation = Configurable Double
 
 withParams :: (String -> Double) -> Configurable (Either Double Parameter) -> Simulation
 withParams m = fmap (either id (m . nam))
+
+simulationVal :: Configurable (Either Double Parameter) -> Simulation
+simulationVal = fmap (either id sim)
 
 justParams :: Configurable (Either Double Parameter) -> [Parameter]
 justParams = rights . foldr (:) [] . getConfig

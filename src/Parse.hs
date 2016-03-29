@@ -209,11 +209,6 @@ unAnon = evalState uniqNames . (traverse . traverse . traverse) (<$> uniqName)
 eitherA :: Alternative f => f a -> f b -> f (Either a b)
 eitherA x y = Left <$> x <|> Right <$> y
 
-uniqNames :: [String]
-uniqNames = flip (:) <$> [] : uniqNames <*> ['a'..'z']
-
-uniqName :: State [String] String
-uniqName = State (swap . fromJust . List.uncons)
 
 allFuncs :: [Func]
 allFuncs = [minBound..maxBound]

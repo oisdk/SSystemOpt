@@ -48,23 +48,8 @@ executable configure
                      , SSystems
                      , turtle
                      , text
-                     , cereal
-                     , bytestring
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-  default-language:    Haskell2010
-
-
-executable simulate
-  hs-source-dirs:      app
-  main-is:             Simulate.hs
-  build-depends:       base >= 4.7 && < 5
-                     , SSystems
                      , containers
-                     , text
-                     , turtle
-                     , cereal
-                     , bytestring
+                     , mtl
   default-language:    Haskell2010
   ghc-options:         -Wall
   default-language:    Haskell2010
