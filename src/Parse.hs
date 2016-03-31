@@ -9,13 +9,12 @@ module Parse ( initialAssign
 
 import           Control.Applicative
 import           Control.Monad.Identity (Identity)
+import           Control.Monad.State
 import           Data.Functor           (($>))
 import qualified Data.List              as List
 import           Data.Map.Strict        (Map)
 import qualified Data.Map.Strict        as Map
-import           Data.Maybe             (fromJust)
 import           Data.Text              (Text)
-import           Data.Tuple             (swap)
 import           Expr
 import           Prelude                hiding (unlines, (^))
 import           SSystem
@@ -204,7 +203,7 @@ parseSystem = flip runParser emptyFill $ do
 -- Utility
 
 unAnon :: [PowerLawForm (Either Double AnonParam)] -> [PowerLawForm (Either Double Parameter)]
-unAnon = evalState uniqNames . (traverse . traverse . traverse) (<$> uniqName)
+unAnon = flip evalState uniqNames . (traverse . traverse . traverse) (<$> uniqName)
 
 eitherA :: Alternative f => f a -> f b -> f (Either a b)
 eitherA x y = Left <$> x <|> Right <$> y

@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module Utils where
 
 import           Control.Monad.State
@@ -47,7 +45,17 @@ uniqNames :: [String]
 uniqNames = flip (:) <$> [] : uniqNames <*> ['a'..'z']
 
 uniqName :: State [String] String
-uniqName = State (swap . fromJust . List.uncons)
+uniqName = state (fromJust . List.uncons)
 
 untilM :: Monad m => (a -> m (Maybe a)) -> a -> m a
 untilM f = g where g x = f x >>= maybe (pure x) g
+
+newtype RecFR a ans = RecFR { unRecFR :: a -> (RecFR a ans -> ans) -> ans }
+
+zipWithF :: (Foldable f, Foldable g) => (a -> b -> c) -> f a -> g b -> [c]
+zipWithF c xs = foldr f (const []) xs . RecFR . foldr g (\_ _ -> []) where
+  g e2 r2 e1 r1 = c e1 e2 : r1 (RecFR r2)
+  f e r x = unRecFR x e r
+
+zipF :: (Foldable f, Foldable g) => f a -> g b -> [(a, b)]
+zipF = zipWithF (,)
