@@ -20,19 +20,23 @@ import           Turtle
 import           Utils
 import           Zipper
 
-optOptions :: Parser (Maybe FilePath, Double, Double)
-optOptions = (,,) <$> optional (optPath "Path" 'p' "Path to the model file. Reads from stdin otherwise.")
-                  <*> optDouble "Min" 'i' "Minimum value for exponents"
-                  <*> optDouble "Max" 'a' "Maximum value for exponents"
+optOptions :: Parser (SSystem Double -> Simulation)
+optOptions = Simulation <$> optDouble "Start" 's' "Start time for simulation"
+                        <*> optDouble "Step" 'z' "Step size"
+                        <*> optInt "Steps" 'n' "Number of steps"
+                        <*> optDouble "AbsTol" 'a' "Absolute tolerance"
+                        <*> optDouble "RelTol" 'r' "Relative tolerance"
+
+modelOpt :: Parser (Maybe FilePath)
+modelOpt = optional $ optPath "Model" 'm' "Path to model. Reads from stdin otherwise"
 
 main :: IO ()
 main = view $ do
-  (l,i,a) <- options "SSystem" optOptions
+  (l,config) <- options "SSystem" ((,) <$> modelOpt <*> optOptions)
   modelCode <- maybe stdin (strict . input) l -- Reads model code from a file, if it was given, otherwise from stdin
   let parsed = parseSystem (maybe "SSystem code from stdin" (Text.unpack . format fp) l) modelCode -- Parses model code
-  let bounds = Bounds i a (0.5+)
   model <- either (die . repr) pure parsed -- Converts Either ParseError Configurable to IO Configurable (with errors)
-  simVal <- parseOut <$> strict (runSolver (simulationVal model))
+  simVal <- parseOut <$> strict ((runSolver . config . simulationVal) model)
   let init = (fromList . (fmap . const . minB) bounds . justParams) model
   let cmpFnc = cmpMemo model simVal
   final <- toList <$> evalMemo (searchM cmpFnc bounds init)

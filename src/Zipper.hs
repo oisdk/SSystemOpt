@@ -5,9 +5,6 @@ module Zipper where
 import           Control.Applicative           (liftA2)
 import           Control.Applicative.Backwards
 import           Control.Comonad
-import           Control.Monad
-import           Control.Monad.Trans
-import           Control.Monad.Trans.Maybe
 import           Data.Foldable
 import           Data.Ord                      (comparing)
 import           Utils
@@ -94,3 +91,4 @@ mse :: [Double] -> [Double] -> Double
 mse = sqrt .: uncurry (/) .: foldl' sumInc (0,0) .: zipWith sqDiff where
   sqDiff !a !b = let d = a - b in d * d
   sumInc (!s,!n) !e = (s+e, n+1)
+

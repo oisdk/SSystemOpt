@@ -3,12 +3,14 @@
 
 module Solver where
 
-import           Data.List (intercalate)
+import           Data.List (intercalate, intersperse)
 import           Data.Text (pack)
 import           Prelude   hiding (FilePath)
 import           SSystem
 import           Turtle
 import           Utils
+import Control.Arrow (second)
+import Control.Monad.State
 
 class TaylorCompat a where
   taylorSource :: a -> String
@@ -16,7 +18,7 @@ class TaylorCompat a where
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
 setup :: Simulation-> Shell Text
-setup = inproc "taylor" ["-sqrt"] . pure . pack . taylorSource
+setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure . pack . taylorSource
 
 -- | Given a configuration, prints a the output to the stdout,
 -- after compiling and running.
@@ -30,28 +32,38 @@ runSolver c = do
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
   inproc ostr [] empty
 
-instance (Eq d, Num d, Show d) => TaylorCompat (Configurable d) where
-  taylorSource (Configurable sy st sp ae re ss) =
-    taylorSource sy ++ "\n\n" ++ clines [ "start_time="               ++ show st
-                                        , "stop_time="                ++ show sp
-                                        , "absolute_error_tolerance=" ++ show ae
-                                        , "relative_error_tolerance=" ++ show re
-                                        , "number_of_steps="          ++ show ss ]
-instance TaylorCompat InitialDeclaration where
-  taylorSource = show . idExpr
 
-instance (Eq d, Num d, Show d) => TaylorCompat (SSystem d) where
-  taylorSource (SSystem inits derivs) = unlines [
-    "initial_values = " ++ intercalate ", " (map taylorSource inits) ++ ";\n"
-                                , (clines . map taylorSource) derivs ]
+instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
+  taylorSource = g . flip runState (uniqNames, []) . traverse f . getSSystem where
+    f :: (Num a, Eq a, Show a) => STerm a -> State ([String],[a]) String
+    f (STerm pf nf pe ne iv) = do
+      (x:xs) <- gets fst
+      modify (second (iv:))
+      pure $ "diff(" ++ x ++ ", t) = " ++ showO pf ++ p pe ++ showN nf ++ p ne where
+          p = intercalate " * " . zipWith ((. showO) . (++)) uniqNames
+          showZ 0 = ""
+          showZ n = show n ++ " * "
+          showO 1 = ""
+          showO n = " ^ " ++ show n
+          showN 0 = ""
+          showN n = " - " ++ show n ++ " * "
+    g (l,(_,v)) = clines $ ("initial_values=" ++ interpose ',' (map show v)) : l
 
-instance (Eq d, Num d, Show d) => TaylorCompat (PTerm d) where
-  taylorSource (C c) = show c
-  taylorSource (v :^: 1) = v
-  taylorSource (v :^: p) = v ++ " ^ " ++ show p
-
-instance (Eq d, Num d, Show d) => TaylorCompat (PowerLawForm d) where
-  taylorSource = \case
-    PLawF v xs [] -> "diff(" ++ v ++ ", t) = " ++ showProd xs
-    PLawF v xs ys -> "diff(" ++ v ++ ", t) = " ++ showProd xs ++ " - " ++ showProd ys
-    where showProd = intercalate " * " . map taylorSource
+data Simulation = Simulation { startTime :: Double
+                             , stepSize :: Double
+                             , nSteps :: Int
+                             , absTol :: Double
+                             , relTol :: Double
+                             , system :: SSystem Double
+                             }
+instance TaylorCompat Simulation where
+  taylorSource (Simulation st ss ns at rt sy) = clines [ taylorSource sy
+                                                       , "start_time=" ++ show st
+                                                       , "step_size=" ++ show ss
+                                                       , "number_of_steps=" ++ show ns
+                                                       , "absolute_error_tolerance=" ++ show at]
+  
+interpose :: a -> [[a]] -> [a]
+interpose _ [] = []
+interpose _ [x] = x
+interpose y (x:xs) = x ++ foldr (\e a -> y : e ++ a) [] xs

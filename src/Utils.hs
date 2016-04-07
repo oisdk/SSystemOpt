@@ -5,6 +5,7 @@ import           Data.Bifunctor      (bimap)
 import qualified Data.List           as List
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe
+import Control.Applicative
 
 unzipWith :: (a -> (b,c)) -> [a] -> ([b],[c])
 {-# INLINE unzipWith #-}
@@ -53,9 +54,19 @@ untilM f = g where g x = f x >>= maybe (pure x) g
 newtype RecFR a ans = RecFR { unRecFR :: a -> (RecFR a ans -> ans) -> ans }
 
 zipWithF :: (Foldable f, Foldable g) => (a -> b -> c) -> f a -> g b -> [c]
-zipWithF c xs = foldr f (const []) xs . RecFR . foldr g (\_ _ -> []) where
-  g e2 r2 e1 r1 = c e1 e2 : r1 (RecFR r2)
-  f e r x = unRecFR x e r
+zipWithF f = foldr2 (\a b c -> f a b : c) []
+
+foldr2 :: (Foldable f, Foldable g) => (a -> b -> c -> c) -> c -> f a -> g b -> c
+foldr2 f i xs = foldr g (\_ -> i) xs . RecFR . foldr h (\_ _ -> i) where
+  g e r x = unRecFR x e r
+  h e2 r2 e1 r1 = f e1 e2 (r1 (RecFR r2))
 
 zipF :: (Foldable f, Foldable g) => f a -> g b -> [(a, b)]
 zipF = zipWithF (,)
+
+infixl 2 ??
+(??) :: Alternative f => f a -> a -> f a
+(??) a b = a <|> pure b
+
+eitherA :: Alternative f => f a -> f b -> f (Either a b)
+eitherA x y = Left <$> x <|> Right <$> y

@@ -29,6 +29,7 @@ module Expr
   , unname
   , fromDouble
   , anaM
+  , cataM
   ) where
 
 import           Control.Comonad.Cofree
