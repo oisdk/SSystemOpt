@@ -125,7 +125,8 @@ static :: Applicative f => Double -> f NumLearn
 static = pure . NumLearn . Left
 
 data InitialDeclaration = ID { idName :: String
-                             , idVal  :: NumLearn }
+                             , idVal  :: NumLearn
+                             } deriving (Eq, Show)
 
 data ODE = ODE { odeName   :: String
                , odePosFac :: NumLearn
