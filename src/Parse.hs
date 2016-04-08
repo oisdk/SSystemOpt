@@ -18,7 +18,6 @@ import           Data.Either                (partitionEithers)
 import           Data.Foldable
 import           Data.Functor               (($>))
 import           Data.List                  (sortOn, uncons)
-import qualified Data.Map                   as Map
 import           Data.Text                  (Text)
 import           Expr
 import           Prelude                    hiding (unlines, (^))
@@ -119,7 +118,7 @@ instance Parse ODE where
     fac = (parser <* optional star) <|> static 1
     emt = (,) <$> static 0 <*> pure []
     lst = (,) <$> fac <*> (sepBy trm star >>= uni)
-    uni = fmap Map.assocs . foldrM (\(t,e) -> maybe (unexpected t) pure . insertUnique t e) Map.empty
+    uni = either unexpected pure . sortUniques
     trm = (,) <$> identifier <*> (carat *> parser <|> static 1)
 
 static :: Applicative f => Double -> f NumLearn
@@ -138,17 +137,6 @@ data ODE = ODE { odeName   :: String
 parseSystem :: String -> Text -> Either String (SSystem NumLearn)
 parseSystem s t = fromParsed =<< mapLeft show (runParser (whiteSpace *> semiSep1 (eitherA parser parser)) () s t)
 
--- Utility
-
-allFuncs :: [Func]
-allFuncs = [minBound..maxBound]
-
-parseTester :: (Show a, Eq a) => Parser a -> a -> Text -> Maybe String
-parseTester p e s = either (Just . show) f (runParser p () "testing" s) where
-  f r | r == e = Nothing
-      | otherwise = Just $ "Expected: " ++ show e ++ "\n" ++ "Received: " ++ show r
-
-
 fromParsed :: [Either InitialDeclaration ODE] -> Either String (SSystem NumLearn)
 fromParsed = fmap SSystem . uncurry f . (sortOn idName *** sortOn odeName) . partitionEithers where
   prepZero x = NumLearn (Left 0.0) : x
@@ -160,6 +148,16 @@ fromParsed = fmap SSystem . uncurry f . (sortOn idName *** sortOn odeName) . par
       | otherwise = (Left . unwords) ["Variables", a, "and", b, "mismatched."]
     h = fmap concat . flip evalStateT vars . traverse (uncurry j)
     j w n = go where go = nextVar >>= bool (pure [n]) (fmap prepZero go) . (w==)
+
+-- Utility
+
+allFuncs :: [Func]
+allFuncs = [minBound..maxBound]
+
+parseTester :: (Show a, Eq a) => Parser a -> a -> Text -> Maybe String
+parseTester p e s = either (Just . show) f (runParser p () "testing" s) where
+  f r | r == e = Nothing
+      | otherwise = Just $ "Expected: " ++ show e ++ "\n" ++ "Received: " ++ show r
 
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft f (Left x) = Left (f x)
