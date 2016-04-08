@@ -5,6 +5,9 @@
 
 module SSystem where
 
+import           Control.Monad.State
+import           Data.Foldable       (toList)
+import           Data.List           (uncons)
 import           Data.Serialize
 import           GHC.Generics
 import           Test.QuickCheck
@@ -43,3 +46,11 @@ instance Arbitrary NumLearn where
 instance Serialize a => Serialize (STerm a)
 instance Serialize a => Serialize (SSystem a)
 instance Serialize NumLearn
+
+getParams :: SSystem NumLearn -> [[Double]]
+getParams = toList . getNumLearn <=< toList
+
+withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem Double)
+withParams = evalStateT . traverse f where
+  f = either pure ((const . StateT) (maybe err Right . uncons)) . getNumLearn
+  err = Left "Parameters and ssystem unmatched"

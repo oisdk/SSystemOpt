@@ -2,16 +2,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
 
-module Parse where
+module Parse
+       ( Parser
+       , ODE(..)
+       , InitialDeclaration(..)
+       , parseTester
+       , parseSystem
+       ) where
 
 import           Control.Applicative        hiding (optional)
 import           Control.Arrow              ((***))
 import           Control.Monad.Identity     (Identity)
 import           Control.Monad.State
-import           Control.Monad.Trans.Either
 import           Data.Either                (partitionEithers)
+import           Data.Foldable
 import           Data.Functor               (($>))
 import           Data.List                  (sortOn, uncons)
+import qualified Data.Map                   as Map
 import           Data.Text                  (Text)
 import           Expr
 import           Prelude                    hiding (unlines, (^))
@@ -50,7 +57,7 @@ reservedOp, reserved :: String -> Parser ()
 parens, bracks       :: Parser a -> Parser a
 semiSep1, commaSep   :: Parser a -> Parser [a]
 function             :: Func -> Operator Text () Identity Expr
-identifier, comma    :: Parser String
+identifier           :: Parser String
 whiteSpace, star, carat, hyph :: Parser ()
 pnegate              :: Num a => Parser (a -> a)
 double               :: Parser Double
@@ -64,7 +71,6 @@ reserved   = Token.reserved   lexer
 whiteSpace = Token.whiteSpace lexer
 semiSep1   = Token.semiSep1   lexer
 commaSep   = Token.commaSep   lexer
-comma      = Token.comma      lexer
 double     = Token.float      lexer
 integer    = Token.integer    lexer
 pnegate    = reservedOp "-" $> negate <|> pure id
@@ -112,7 +118,8 @@ instance Parse ODE where
     var = try (reserved "ddt") *> identifier <* reservedOp "="
     fac = (parser <* optional star) <|> static 1
     emt = (,) <$> static 0 <*> pure []
-    lst = (,) <$> fac <*> sepBy trm star
+    lst = (,) <$> fac <*> (sepBy trm star >>= uni)
+    uni = fmap Map.assocs . foldrM (\(t,e) -> maybe (unexpected t) pure . insertUnique t e) Map.empty
     trm = (,) <$> identifier <*> (carat *> parser <|> static 1)
 
 static :: Applicative f => Double -> f NumLearn
@@ -153,10 +160,6 @@ fromParsed = fmap SSystem . uncurry f . (sortOn idName *** sortOn odeName) . par
       | otherwise = (Left . unwords) ["Variables", a, "and", b, "mismatched."]
     h = fmap concat . flip evalStateT vars . traverse (uncurry j)
     j w n = go where go = nextVar >>= bool (pure [n]) (fmap prepZero go) . (w==)
-
-
-eitherAT :: (Alternative f, Monad f) => f a -> f b -> EitherT b f a
-eitherAT a b = EitherT (Right <$> a <|> Left <$> b)
 
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft f (Left x) = Left (f x)

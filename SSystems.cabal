@@ -19,6 +19,7 @@ library
                      , SSystem
                      , Utils
                      , Parse
+                     , Search
   other-extensions:    DeriveFunctor
                      , TypeFamilies
                      , DeriveFoldable
