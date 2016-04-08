@@ -2,7 +2,6 @@ module Utils where
 
 import           Control.Applicative
 import           Control.Monad.State
-import           Data.Bifunctor      (bimap)
 import qualified Data.List           as List
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe
@@ -10,16 +9,10 @@ import           Data.Text           (pack)
 import           Data.Traversable
 import           Turtle              (Shell, die)
 
-unzipWith :: (a -> (b,c)) -> [a] -> ([b],[c])
-unzipWith f = foldr (uncurry bimap . bimap (:) (:) . f) ([],[])
-
-clines :: Foldable f => f String -> String
-clines = fromMaybe "" . foldr f Nothing where
-  f e = Just . maybe e (\a -> e ++ ";\n" ++ a)
-
-clineS :: Foldable f => f ShowS -> ShowS
-clineS = fromMaybe id . foldr f Nothing where
-  f e = Just . maybe e ((e . showString ";\n") .)
+-- interc :: Foldable f => String -> f ShowS -> ShowS
+-- interc w = fromMaybe id . foldr f Nothing where
+--   f e = Just . maybe e ((e . i) .)
+--   i = showString w
 
 insertUnique :: Ord k => k -> a -> Map.Map k a -> Maybe (Map.Map k a)
 insertUnique key val m = case Map.insertLookupWithKey (\_ n _ -> n) key val m of

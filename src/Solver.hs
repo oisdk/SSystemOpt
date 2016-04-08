@@ -14,24 +14,24 @@ import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as M
 import           Data.Maybe
 import           Data.Ord            (comparing)
-import           Data.Text           (pack)
+import           Data.Text           (pack, intercalate, append, concat)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
-import           Prelude             hiding (FilePath)
+import           Prelude             hiding (FilePath, concat)
 import           Search
 import           SSystem
 import           Turtle              (Parser, Shell, Text, empty, format, fp,
                                       inproc, mktempdir, mktempfile, optDouble,
-                                      optInt, output, procs, using)
+                                      optInt, output, procs, using, repr)
 import           Utils
 
 class TaylorCompat a where
-  taylorSource :: a -> String
+  taylorSource :: a -> Text
 
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
 setup :: Simulation -> Shell Text
-setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure . pack . taylorSource
+setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure . taylorSource
 
 -- | Given a configuration, prints a the output to the stdout,
 -- after compiling and running.
@@ -49,25 +49,24 @@ runSolver c = do
 
 instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
   taylorSource = g . flip runState (uniqNames, []) . traverse f . getSSystem where
-    f :: (Num a, Eq a, Show a) => STerm a -> State ([String],[ShowS]) ShowS
+    f :: (Num a, Eq a, Show a) => STerm a -> State ([String],[Text]) Text
     f (STerm pf nf pe ne iv) = do
       (x:xs,vs) <- get
-      put (xs,shows iv:vs)
+      put (xs,repr iv:vs)
       pure (rest pf pe nf ne x)
-    rest pf pe nf ne x s = "diff(" ++ x ++ ", t) = " ++ (showZ pf . p pe . showN nf . p ne) s
-    p :: (Num a, Eq a, Show a) => [a] -> ShowS
-    p = interc " * " . catMaybes . zipWith showO uniqNames
-    showZ 0 s = s
-    showZ n s = show n ++ " * " ++ s
+    rest pf pe nf ne x = concat ["diff(", pack x, ", t) = ", showZ pf, p pe, showN nf, p ne]
+    p :: (Num a, Eq a, Show a) => [a] -> Text
+    p = intercalate " * " . catMaybes . zipWith showO uniqNames
+    showZ 0 = ""
+    showZ n = append (repr n) " * "
     showO _ 0 = Nothing
-    showO v 1 = Just (showString v)
-    showO v n = Just (showString v . showString " ^ " . shows n)
-    showN 0 s = s
-    showN 1 s = " - " ++ s
-    showN n s = " - " ++ show n ++ " * " ++ s
-    g (l,(_,v)) = showString "initial_values=" (interc "," v (";\n" ++ interc ";\n" l ""))
-    interc _ [] s = s
-    interc c (x:xs) s = x $ foldr (\e a -> c ++ e a) s xs
+    showO v 1 = Just (pack v)
+    showO v n = (Just . concat) [pack v, " ^ ", repr n]
+    showN 0 = ""
+    showN 1 = " - "
+    showN n = concat [" - ", repr n, " * "]
+    g (l,(_,v)) = concat ["initial_values=", intercalate "," v, ";\n", intercalate ";\n" l]
+
 
 data Simulation = Simulation { startTime :: Double
                              , stepSize  :: Double
@@ -78,12 +77,13 @@ data Simulation = Simulation { startTime :: Double
                              }
 
 instance TaylorCompat Simulation where
-  taylorSource (Simulation st ss ns at rt sy) = taylorSource sy ++ clines
-                                                       [ "start_time=" ++ show st
-                                                       , "step_size=" ++ show ss
-                                                       , "number_of_steps=" ++ show ns
-                                                       , "absolute_error_tolerance=" ++ show at
-                                                       , "relative_error_tolerance=" ++ show rt]
+  taylorSource (Simulation st ss ns at rt sy) =
+    intercalate ";\n" [ append "start_time=" (repr st)
+                      , append "step_size=" (repr ss)
+                      , append "number_of_steps=" (repr ns)
+                      , append "absolute_error_tolerance=" (repr at)
+                      , append "relative_error_tolerance=" (repr rt)
+                      , taylorSource sy]
 
 simOptions :: Parser (SSystem Double -> Simulation)
 simOptions = Simulation <$> optDouble "Start" 's' "Start time for simulation"
