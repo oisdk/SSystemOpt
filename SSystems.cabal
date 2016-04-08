@@ -19,7 +19,6 @@ library
                      , SSystem
                      , Utils
                      , Parse
-                     , Zipper
   other-extensions:    DeriveFunctor
                      , TypeFamilies
                      , DeriveFoldable
@@ -37,6 +36,8 @@ library
                      , cereal
                      , transformers
                      , comonad
+                     , either
+                     , QuickCheck >= 2.8
   ghc-options:         -Wall
   default-language:    Haskell2010
 

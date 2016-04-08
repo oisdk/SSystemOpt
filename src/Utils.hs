@@ -1,14 +1,18 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Utils where
 
+import           Control.Applicative
 import           Control.Monad.State
 import           Data.Bifunctor      (bimap)
+import           Data.List           (sortOn)
 import qualified Data.List           as List
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe
-import Control.Applicative
+import Data.Foldable
+import Data.Traversable
 
 unzipWith :: (a -> (b,c)) -> [a] -> ([b],[c])
-{-# INLINE unzipWith #-}
 unzipWith f = foldr (uncurry bimap . bimap (:) (:) . f) ([],[])
 
 clines :: [String] -> String
@@ -57,7 +61,7 @@ zipWithF :: (Foldable f, Foldable g) => (a -> b -> c) -> f a -> g b -> [c]
 zipWithF f = foldr2 (\a b c -> f a b : c) []
 
 foldr2 :: (Foldable f, Foldable g) => (a -> b -> c -> c) -> c -> f a -> g b -> c
-foldr2 f i xs = foldr g (\_ -> i) xs . RecFR . foldr h (\_ _ -> i) where
+foldr2 f i xs = foldr g (const i) xs . RecFR . foldr h ((const.const) i) where
   g e r x = unRecFR x e r
   h e2 r2 e1 r1 = f e1 e2 (r1 (RecFR r2))
 
@@ -70,3 +74,45 @@ infixl 2 ??
 
 eitherA :: Alternative f => f a -> f b -> f (Either a b)
 eitherA x y = Left <$> x <|> Right <$> y
+
+newtype RecAccu a b = RecAccu { unRecAccu :: a -> (RecAccu a b, b) }
+
+zipInto :: (Traversable t, Foldable f) => (a -> Maybe b -> c) -> t a -> f b -> t c
+zipInto f xs = snd . flip (mapAccumL unRecAccu) xs . RecAccu . foldr h i where
+  i e = (RecAccu i, f e Nothing)
+  h e2 a e1 = (RecAccu a, f e1 (Just e2))
+
+minByM :: (Monad m, Foldable f) => (a -> a -> m Ordering) -> f a -> m (Maybe a)
+minByM cmp = foldrM f Nothing where
+  f e = fmap Just . maybe (pure e) (\a -> fmap (bool e a . (LT==)) (cmp e a))
+
+mse :: [Double] -> [Double] -> Double
+mse = sqrt .: uncurry (/) .: foldl' sumInc (0,0) .: zipWith sqDiff where
+  sqDiff !a !b = let d = a - b in d * d
+  sumInc (!s,!n) !e = (s+e, n+1)
+
+eachNext :: Int -> a -> a -> [[a]]
+eachNext x a b = f x where
+  f 0 = [[]]
+  f n = map (a:) r ++ map (b:) r where r = f (n-1)
+
+groupWithPos :: Ord a => [a] -> Map.Map a [Integer]
+groupWithPos = foldr f Map.empty . zip [0..] where
+  f (v,k) = Map.insertWith (++) k [v]
+
+lattice :: Ord a => [[a]] -> [[a]]
+lattice = map (map snd . sortOn fst) . Map.foldrWithKey f [[]] . groupWithPos where
+  f k v b =  [ zip v h ++ t | hs <- (zipWith ((eachNext.length) v) <*> tail) k, h <- hs, t <- b]
+
+right :: (a -> b) -> Either a b -> b
+right f (Left x) = f x
+right _ (Right x) = x
+
+left :: (a -> b) -> Either b a -> b
+left _ (Left x) = x
+left f (Right x) = f x
+
+replace :: (Traversable t, Foldable f) => (a -> Maybe b) -> (a -> b) -> t a -> f b -> t b
+replace f g xs = snd . flip (mapAccumL unRecAccu) xs . RecAccu . foldr h i where
+  i e = (RecAccu i, g e)
+  h e2 a = maybe (RecAccu a, e2) (RecAccu (h e2 a),) . f
