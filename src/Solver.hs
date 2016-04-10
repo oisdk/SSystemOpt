@@ -1,30 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Solver
-       ( search
+       ( simMemo
+       , runMemo
        , parseOut
        , Simulation(..)
        , simOptions
        ) where
 
-import           Control.Applicative (liftA2)
 import           Control.Monad.State
-import           Data.Function       (on)
 import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as M
 import           Data.Maybe
-import           Data.Ord            (comparing)
-import           Data.Text           (pack, intercalate, append, concat)
+import           Data.Text           (append, concat, intercalate, pack)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
 import           Prelude             hiding (FilePath, concat)
-import           Search
 import           SSystem
 import           Turtle              (Parser, Shell, Text, empty, format, fp,
                                       inproc, mktempdir, mktempfile, optDouble,
-                                      optInt, output, procs, using, repr)
+                                      optInt, output, procs, repr, using, echo, strict)
 import           Utils
 
+
+-- | A typeclass for types with a representation in Taylor source code
 class TaylorCompat a where
   taylorSource :: a -> Text
 
@@ -32,10 +31,14 @@ class TaylorCompat a where
 -- for a given configuration
 setup :: Simulation -> Shell Text
 setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure . taylorSource
+-- setup s = do
+--   let ts = taylorSource s
+--   echo ts
+--   (inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure) ts
 
 -- | Given a configuration, prints a the output to the stdout,
 -- after compiling and running.
-runSolver :: Simulation -> Shell [[Double]]
+runSolver :: Simulation -> Shell (Maybe [[Double]])
 runSolver c = do
   dir <- using (mktempdir "/tmp" "ssystems")
   cpath <- using (mktempfile dir "solver.c")
@@ -43,9 +46,8 @@ runSolver c = do
   opath <- using (mktempfile dir "solver.o")
   let ostr = format fp opath
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
-  out <- inproc ostr [] empty
-  parseOut out
-
+  out <- strict $ inproc ostr [] empty
+  pure $ eitherToMaybe (parseOut out)
 
 instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
   taylorSource = g . flip runState (uniqNames, []) . traverse f . getSSystem where
@@ -56,18 +58,17 @@ instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
       pure (rest pf pe nf ne x)
     rest pf pe nf ne x = concat ["diff(", pack x, ", t) = ", showZ pf, p pe, showN nf, p ne]
     p :: (Num a, Eq a, Show a) => [a] -> Text
-    p = intercalate " * " . catMaybes . zipWith showO uniqNames
-    showZ 0 = ""
-    showZ n = append (repr n) " * "
+    p = concat . catMaybes . zipWith showO uniqNames
+    showZ 0 = "0"
+    showZ n = repr n
     showO _ 0 = Nothing
-    showO v 1 = Just (pack v)
-    showO v n = (Just . concat) [pack v, " ^ ", repr n]
+    showO v 1 = Just (" * " `append` pack v)
+    showO v n = (Just . concat) [" * ", pack v, " ^ ", repr n]
     showN 0 = ""
-    showN 1 = " - "
-    showN n = concat [" - ", repr n, " * "]
-    g (l,(_,v)) = concat ["initial_values=", intercalate "," v, ";\n", intercalate ";\n" l]
+    showN n = concat [" - ", repr n]
+    g (l,(_,v)) = concat ["initial_values=", intercalate "," v, ";\n", intercalate ";\n" l] `append` ";"
 
-
+-- | The full information needed to run a Taylor simulation
 data Simulation = Simulation { startTime :: Double
                              , stepSize  :: Double
                              , nSteps    :: Int
@@ -92,6 +93,7 @@ simOptions = Simulation <$> optDouble "Start" 's' "Start time for simulation"
                         <*> optDouble "AbsTol" 'a' "Absolute tolerance"
                         <*> optDouble "RelTol" 'r' "Relative tolerance"
 
+-- | Memoizes a function using the state transformer monad
 memo :: (Monad m, Ord a) => (a -> m b) -> a -> StateT (Map a b) m b
 memo f x = gets (M.lookup x) >>= maybe new pure where
   new = do
@@ -99,20 +101,17 @@ memo f x = gets (M.lookup x) >>= maybe new pure where
     modify (M.insert x y)
     pure y
 
-parseOut :: Text -> Shell [[Double]]
-parseOut = toDie
-         . (traverse.traverse) (fmap fst . double)
+-- | Parses the output from a Taylor simulation
+parseOut :: Text -> Either String [[Double]]
+parseOut = (traverse.traverse) (fmap fst . double)
          . map Text.words
          . Text.lines
 
 simMemo :: ([Double] -> Shell Simulation)
         -> [Double]
-        -> StateT (Map [Double] [[Double]]) Shell [[Double]]
-simMemo model = memo (runSolver <=< model)
+        -> StateT (Map [Double] (Maybe [[Double]])) Shell (Maybe [[Double]])
+simMemo model = memo (\ns -> (echo . repr) ns >> model ns >>= runSolver)
 
-search :: ([Double] -> Shell Simulation)
-       -> [[Double]]
-       -> [[Double]]
-       -> Shell (Maybe [Double])
-search m s = flip evalStateT M.empty . minByM cmpFnc . lattice where
-  cmpFnc = flip ((liftA2 . comparing) (rmse s)) `on` simMemo m
+runMemo :: (Monoid m, Monad f)
+        => StateT m f a -> f a
+runMemo = flip evalStateT mempty

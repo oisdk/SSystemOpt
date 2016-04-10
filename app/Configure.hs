@@ -7,6 +7,7 @@ import           Control.Monad.State
 import           Data.Text           (unpack)
 import           Parse               (parseSystem)
 import           Prelude             hiding (FilePath)
+import           Search
 import           Solver
 import           SSystem
 import           Turtle              (FilePath, Parser, echo, format, fp, input,
@@ -25,11 +26,11 @@ main = view $ do
                                           <*> modelPath
                                           <*> simOptions)
   modelCode <- maybe stdin (strict . input) l
-  simulation <- parseOut =<< (strict . input) d
+  simulation <- (toDie . parseOut) =<< (strict . input) d
   let desc = maybe "SSystem code from stdin" (unpack . format fp) l
   model <- toDie (parseSystem desc modelCode)
-  let simulator = fmap config . toDie . withParams model
-  final <- search simulator simulation (getParams model)
+  let simulator = simMemo (fmap config . toDie . withParams model)
+  final <- runMemo $ search simulator simulation (getParams model)
   echo "Final exponents:"
   pure final
 

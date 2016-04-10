@@ -4,6 +4,7 @@ module Utils
        , uniqNames
        , eitherA
        , toDie
+       , eitherToMaybe
        ) where
 
 import           Control.Applicative
@@ -31,3 +32,7 @@ eitherA x y = Left <$> x <|> Right <$> y
 
 toDie :: Either String a -> Shell a
 toDie = either (die . pack) pure
+
+eitherToMaybe :: Either a b -> Maybe b
+eitherToMaybe (Left _) = Nothing
+eitherToMaybe (Right x) = Just x
