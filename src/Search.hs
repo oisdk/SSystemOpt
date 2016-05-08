@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Search
        ( search
@@ -9,7 +10,6 @@ import           Data.Foldable
 import           Data.Function       (on)
 import           Data.List           (sortOn)
 import qualified Data.Map            as Map
-import           Data.Ord            (comparing)
 import           Utils
 import Control.Monad
 
@@ -35,12 +35,6 @@ lattice' :: Ord a => [[a]] -> [[a]]
 lattice' = map (map snd . sortOn fst) . Map.foldrWithKey f [[]] . groupWithPos where
   f k v b =  [ zip v h ++ t | hs <- (zipWith ((eachNext.length) v) <*> tail) k, h <- hs, t <- b]
 
-surround :: Double -> [Double]
-surround x = [x - 0.5, x, x + 0.5]
-
-minByM :: (Monad m, Foldable f) => (a -> a -> m Ordering) -> f a -> m (Maybe a)
-minByM cmp = foldrM f Nothing where
-  f e = fmap Just . maybe (pure e) (\a -> fmap (bool e a . (LT==)) (cmp e a))
 
 rmse :: [[Double]] -> [[Double]] -> Double
 rmse a b = (sqrt . mean) (zipWith f a b) where
@@ -57,14 +51,13 @@ search :: Monad m
        -> [[Double]]                 -- ^ Observed data
        -> [[Double]]                 -- ^ Parameters
        -> m (Maybe [Double])
-search sim obs = maybe (pure Nothing) close <=< (minByM cmpFnc . lattice) where
-  cmpFnc = flip ((liftA2 . comparing) (fmap $ rmse obs)) `on` (fmap MaxMaybe . sim)
+search sim obs = maybe (pure Nothing) close <=< (minOnA metFnc . lattice) where
+  metFnc = fmap (MaxMaybe . fmap (rmse obs)) . sim
   close = go [] where
     go ys [] = pure $ Just ys
-    go ys (x:xs) = maybe (pure Nothing) (flip go xs) =<< (prepWith (around x)) where
-      around x = minByM (cmpFnc `on` (\h -> ys ++ (h:xs))) [x-0.5, x, x+0.5]
+    go ys (x:xs) = maybe (pure Nothing) (`go` xs) =<< prepWith (around x) where
+      around x = minOnA (metFnc . (\h -> ys ++ (h:xs))) [x-0.5, x, x+0.5]
       prepWith = (fmap.fmap) (\x -> ys ++ [x])
-  
 
 newtype MaxMaybe a = MaxMaybe { getMaxMaybe :: Maybe a
                               } deriving (Functor, Eq)

@@ -1,73 +1,61 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
-import           Control.Arrow
-import           Control.Comonad
+import           Control.Applicative
 import           Control.Monad
+import           Data.Functor
+import           Data.Ord
 import           Data.Serialize           (Serialize, decode, encode)
-import           Data.Text                (Text)
-import           Expr
-import           Parse
-import           Prelude                  hiding (atan, cos, cosh, exp, log,
-                                           sin, sinh, tan, tanh, (^))
-import           SSystem
+import           Square
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
-import           Utils
-import Control.Applicative
 
-instance Arbitrary Func where arbitrary = arbitraryBoundedEnum
+toList :: Foldable f => f a -> [a]
+toList = foldr (:) []
 
-instance Arbitrary Expr where
-  arbitrary = sized (fmap Expr . anaM alg) where
-    alg n | n <= 0 = CstF <$> arbitrary
-          | otherwise = oneof [ flip FncF nest <$> arbitrary
-                              , CstF <$> suchThat arbitrary (1000>)
-                              , pure (NegF nest)
-                              , pure (PowF nest nest)
-                              , pure (PrdF nest nest)
-                              , pure (SumF nest nest)
-                              ] where nest = div n 8
-prop_ParseODE :: P.Result
-prop_ParseODE = parseTestProp (ODE
-                               "x1"
-                               (pStatic 0)
-                               []
-                               (pStatic 10)
-                               [("x1", NumLearn (Right [0,0.5,1]))]
-                              )  "ddt x1 = - 10 * x1 ^ [0,0.5 .. 1]"
+prop_correctSize :: Square Integer -> Bool
+prop_correctSize s = n * n == length s where n = _squareSize s
 
-prop_ParseLst1 :: P.Result
-prop_ParseLst1 = parseTestProp [1.0 :: Double] "[1]"
-prop_ParseLst2 :: P.Result
-prop_ParseLst2 = parseTestProp ([] :: [Double]) "[]"
-prop_ParseLst3 :: P.Result
-prop_ParseLst3 = parseTestProp ([1,3..9] :: [Double]) "[1,3..9]"
-prop_ParseLst4 :: P.Result
-prop_ParseLst4 = parseTestProp ([1,3..9] :: [Double]) "[1,3 ..9]"
+prop_listIso :: NonEmptyList Integer -> Bool
+prop_listIso (NonEmpty xs) = sameResult (Just . take m) (fmap toList . fromList n) xs where
+  n = (floor . sqrt' . fromIntegral . length) xs
+  m = n * n
+  sqrt' :: Double -> Double
+  sqrt' = sqrt
 
-pStatic = NumLearn . Left
+prop_listRev :: Square Integer -> Bool
+prop_listRev s = sameResult Just (fromList n . toList) s where
+  n = _squareSize s
 
-eachOf :: [a] -> (a -> P.Result) -> Property
-eachOf l t = once $ foldr f P.succeeded l where
-  f e a = maybe a (bool a r) (P.ok r) where r = t e
+prop_Indexing :: Square Integer -> Bool
+prop_Indexing s = map (unsafeIndex s) ((,) <$> idxs <*> idxs) == toList s where
+  idxs = [0..(_squareSize s - 1)]
 
-isId :: Eq a => (a -> a) -> a -> Bool
-isId f x = x == f x
--- Evil version:
--- isId = (<*>) (==)
+prop_Ordering :: Square Integer -> Square Integer -> Property
+prop_Ordering s t = classify (c==EQ) "Same size squares" . classify (c/=EQ) "Different sized squares" $
+  case c of
+    EQ -> r == comparing toList s t
+    _  -> r == c
+    where
+      c = comparing _squareSize s t
+      r = compare s t
 
-encodeDecode :: (Serialize a, Eq a) => a -> P.Result
-encodeDecode e = either failWith (bool P.succeeded P.failed . (e==)) ((decode . encode) e)
+prop_Serialize :: Square Int -> P.Result
+prop_Serialize = checkSerialize
 
 sameResult :: Eq a => (b -> a) -> (b -> a) -> b -> Bool
 sameResult = liftA2 (==)
 
-parseTestProp :: (Eq a, Show a, Parse a) => a -> Text -> P.Result
-parseTestProp e s = maybe P.succeeded failWith (parseTester parser e s)
+sameResult2 :: Eq a => (c -> b -> a) -> (c -> b -> a) -> c -> b -> Bool
+sameResult2 = liftA2 sameResult
+
+isId :: Eq a => (a -> a) -> a -> Bool
+isId = sameResult id
+
+checkSerialize :: (Eq a, Serialize a) => a -> P.Result
+checkSerialize a = either failWith (\x -> if x == a then P.succeeded else P.failed) . decode . encode $ a
 
 quickCheckExit :: Testable prop => prop -> IO Result
 quickCheckExit = resultExit <=< quickCheckResult where

@@ -9,9 +9,7 @@
 module Expr
   ( Expr(..)
   , ExprF(..)
-  , NamedExpr
   , Func
-  , ExprType
   , app
   , sin
   , cos
@@ -23,16 +21,14 @@ module Expr
   , cosh
   , tanh
   , (^)
+  , (/)
   , eval
-  , named
-  , unnamed
-  , unname
+  , safeEval
   , fromDouble
   , anaM
   , cataM
   ) where
 
-import           Control.Comonad.Cofree
 import           Control.Monad          ((<=<))
 import           Data.Serialize
 import           Data.Functor           (void)
@@ -40,19 +36,8 @@ import           Data.Functor.Foldable  hiding (Foldable, fold, unfold)
 import qualified Data.Functor.Foldable  as F
 import           GHC.Generics
 import           Prelude                hiding (atan, cos, cosh, exp, log, sin,
-                                         sinh, tan, tanh, (^))
+                                         sinh, tan, tanh, (^), (/))
 import qualified Prelude                as P
-newtype CofreeF f a r = CF { unCofreeF :: (a, f r)
-                           } deriving (Functor, Eq, Ord)
-
-type instance Base (Cofree f a) = CofreeF f a
-
-instance Functor f => F.Foldable (Cofree f a) where
-  project (a :< c) = CF (a, c)
-
-instance Functor f => Unfoldable (Cofree f a) where
-  embed = uncurry (:<) . unCofreeF
-  ana alg = unfold (unCofreeF . alg)
 
 -- | A monadic catamorphism.
 cataM
@@ -75,6 +60,7 @@ data ExprF r = CstF Double
              | FncF Func r
              | NegF r
              | PowF r r
+             | DivF r r
              | PrdF r r
              | SumF r r
              deriving (Functor, Foldable, Traversable, Eq, Ord, Show, Generic)
@@ -85,20 +71,22 @@ newtype Expr = Expr { getExpr :: Fix ExprF } deriving (Eq, Generic)
 instance Serialize Expr where
   put = cata alg . getExpr where
     alg = \case
-      CstF d   -> putWord8 0 >> put d
-      FncF f x -> putWord8 1 >> put f >> x
-      NegF x   -> putWord8 2 >> x
-      PowF x y -> putWord8 3 >> x >> y
-      PrdF x y -> putWord8 4 >> x >> y
-      SumF x y -> putWord8 5 >> x >> y
+      CstF d   -> putWord8 0 *> put d
+      FncF f x -> putWord8 1 *> put f *> x
+      NegF x   -> putWord8 2 *> x
+      PowF x y -> putWord8 3 *> x *> y
+      DivF x y -> putWord8 4 *> x *> y
+      PrdF x y -> putWord8 5 *> x *> y
+      SumF x y -> putWord8 6 *> x *> y
   get = Expr <$> anaM (const (getWord8 >>= alg)) () where
     alg = \case
       0 -> CstF <$> get
       1 -> flip FncF () <$> get
       2 -> pure $ NegF ()
       3 -> pure $ PowF () ()
-      4 -> pure $ PrdF () ()
-      5 -> pure $ SumF () ()
+      4 -> pure $ DivF () ()
+      5 -> pure $ PrdF () ()
+      6 -> pure $ SumF () ()
       _ -> error "Corrupted binary"
 
 
@@ -141,15 +129,19 @@ instance Show Func where
     Tnh -> "tanh"
 
 infixr 8 ^
-class Num e => ExprType e where
-  (^)  :: e -> e -> e
-  app  :: Func -> e -> e
-  eval :: e -> Double
-  fromDouble :: Double -> e
+(^)  :: Expr -> Expr -> Expr
+Expr a ^ Expr b = (Expr . Fix) (PowF a b)
+infixl 7 /
+(/)  :: Expr -> Expr -> Expr
+Expr a / Expr b = (Expr . Fix) (DivF a b)
+app  :: Func -> Expr -> Expr
+app f (Expr x) = (Expr . Fix) (FncF f x)
+fromDouble :: Double -> Expr
+fromDouble = Expr . Fix . CstF
 
 -- Shadows of prelude math functions which work on expressions
 
-sin, cos, exp, log, tan, atan, sinh, cosh, tanh :: ExprType e => e -> e
+sin, cos, exp, log, tan, atan, sinh, cosh, tanh :: Expr -> Expr
 sin  = app Sin
 cos  = app Cos
 exp  = app Exp
@@ -160,18 +152,26 @@ sinh = app Snh
 cosh = app Csh
 tanh = app Tnh
 
-instance ExprType Expr where
-  fromDouble = Expr . Fix . CstF
-  Expr a ^ Expr b = (Expr . Fix) (PowF a b)
-  app f (Expr x) = (Expr . Fix) (FncF f x)
-  eval = cata alg . getExpr where
-    alg = \case
-      CstF d   -> d
-      NegF a   -> negate a
-      SumF a b -> a + b
-      PrdF a b -> a * b
-      PowF a b -> a ** b
-      FncF f x -> appF f x
+eval :: Expr -> Double
+eval = cata evalAlg . getExpr
+
+evalAlg :: ExprF Double -> Double
+evalAlg = \case
+  CstF d   -> d
+  NegF a   -> negate a
+  SumF a b -> a + b
+  DivF a b -> a P./ b
+  PrdF a b -> a * b
+  PowF a b -> a ** b
+  FncF f x -> appF f x
+
+safeEvalAlg :: ExprF Double -> Either String Double
+safeEvalAlg = \case
+  DivF _ 0 -> Left "Tried to divide by zero"
+  e -> Right (evalAlg e)
+
+safeEval :: Expr -> Either String Double
+safeEval = cataM safeEvalAlg . getExpr
 
 instance Show Expr where showsPrec _ = zygo void (pprAlg ((<) . void)) . getExpr
 
@@ -180,6 +180,7 @@ pprAlg cmp e = case e of
   CstF i   -> shows i
   NegF a   -> showChar '-' . par a
   SumF a b -> par a . showString " + " . par b
+  DivF a b -> par a . showString " / " . par b
   PrdF a b -> par a . showString " * " . par b
   PowF a b -> par a . showString " ^ " . par b
   FncF f (_,x) -> shows f . showChar '(' . x . showChar ')'
@@ -192,35 +193,4 @@ instance Num Expr where
   abs e           = if eval e < 0 then negate e else e
   signum          = Expr . ana CstF . signum . eval
   negate          = Expr . Fix . NegF . getExpr
-
-newtype NamedExpr = Named { getNamed :: Cofree ExprF (Maybe String)
-                          } deriving (Eq)
-
-instance ExprType NamedExpr where
-  fromDouble = unnamed . CstF
-  Named a ^ Named b = unnamed (PowF a b)
-  app f (Named x)   = unnamed (FncF f x)
-  eval              = eval . Expr . ana unwrap . getNamed
-
-named :: String -> NamedExpr -> NamedExpr
-named s (Named e) = Named (Just s :< unwrap e)
-
-unnamed :: ExprF (Cofree ExprF (Maybe String)) -> NamedExpr
-unnamed = Named . (Nothing :<)
-
-unname :: NamedExpr -> Expr
-unname = Expr . ana unwrap . getNamed
-
-instance Num NamedExpr where
-  fromInteger       = unnamed . CstF . fromInteger
-  Named a + Named b = unnamed (SumF a b)
-  Named a * Named b = unnamed (PrdF a b)
-  abs e             = if eval e < 0 then negate e else e
-  signum            = unnamed . CstF . signum . eval
-  negate            = unnamed . NegF . getNamed
-
-instance Show NamedExpr where
-  showsPrec _ = zygo void alg . getNamed where
-    alg   (CF (s, e)) = maybe (pprAlg cmp e) showString s
-    cmp e (CF (_, c)) = void e < c
 

@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Solver
        ( simMemo
@@ -6,8 +7,10 @@ module Solver
        , parseOut
        , Simulation(..)
        , simOptions
+       , withParams
        ) where
 
+import           Control.Lens        hiding (strict)
 import           Control.Monad.State
 import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as M
@@ -16,21 +19,26 @@ import           Data.Text           (append, concat, intercalate, pack)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
 import           Prelude             hiding (FilePath, concat)
+import           Square
 import           SSystem
-import           Turtle              (Parser, Shell, Text, empty, format, fp,
-                                      inproc, mktempdir, mktempfile, optDouble,
-                                      optInt, output, procs, repr, using, echo, strict)
+import           Turtle              (Parser, Shell, Text, echo, empty, format,
+                                      fp, inproc, mktempdir, mktempfile,
+                                      optDouble, optInt, output, procs, repr,
+                                      strict, using)
 import           Utils
-
-
 -- | A typeclass for types with a representation in Taylor source code
 class TaylorCompat a where
-  taylorSource :: a -> Text
+  taylorDecls :: a -> [Text]
+
+taylorSource :: TaylorCompat a => a -> Text
+taylorSource = concat . map (`append` ";\n") . taylorDecls
 
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
 setup :: Simulation -> Shell Text
-setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure . taylorSource
+setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"]
+      . pure
+      . taylorSource
 -- setup s = do
 --   let ts = taylorSource s
 --   echo ts
@@ -50,23 +58,29 @@ runSolver c = do
   pure $ eitherToMaybe (parseOut out)
 
 instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
-  taylorSource = g . flip runState (uniqNames, []) . traverse f . getSSystem where
-    f :: (Num a, Eq a, Show a) => STerm a -> State ([String],[Text]) Text
-    f (STerm pf nf pe ne iv) = do
-      (x:xs,vs) <- get
-      put (xs,repr iv:vs)
-      pure (rest pf pe nf ne x)
-    rest pf pe nf ne x = concat ["diff(", pack x, ", t) = ", showZ pf, p pe, showN nf, p ne]
-    p :: (Num a, Eq a, Show a) => [a] -> Text
-    p = concat . catMaybes . zipWith showO uniqNames
-    showZ 0 = "0"
-    showZ n = repr n
-    showO _ 0 = Nothing
-    showO v 1 = Just (" * " `append` pack v)
-    showO v n = (Just . concat) [" * ", pack v, " ^ ", repr n]
-    showN 0 = ""
-    showN n = concat [" - ", repr n]
-    g (l,(_,v)) = concat ["initial_values=", intercalate "," v, ";\n", intercalate ";\n" l] `append` ";"
+  taylorDecls s = initials s  : derivs s where
+    initials (SSystem _ t) =
+      "initial_values=" `append` intercalate ", " (repr._initial <$> t)
+    derivs (SSystem sq t) = imap f (zip uniqNames t) where
+      f i (c, STerm post negt _ _) =
+        concat ["diff(", pack c, ", t) = ", g post negt] where
+          g 0 0 = "0"
+          g 0 n = " - " `append` showSide n (side _2)
+          g n 0 = showSide n (side _1)
+          g n m = concat [showSide n (side _1), " - ", showSide m (side _2)]
+          showSide 1 [] = "1"
+          showSide 1 xs = intercalate " * " xs
+          showSide n l = repr n `append` prepToAll " * " l
+          side l = catMaybes $ zipWith expshow uniqNames (evals l)
+          evals l = [ sq ^?! ix (i,j) . l | j <- [0..(_squareSize sq - 1)]]
+          expshow _ 0 = Nothing
+          expshow n 1 = Just $ pack n
+          expshow n e = Just $ concat [pack n, " ^ ", repr e]
+
+prepToAll :: Text -> [Text] -> Text
+prepToAll _ [] = ""
+prepToAll y (x:xs) = intercalate y (append y x : xs)
+
 
 -- | The full information needed to run a Taylor simulation
 data Simulation = Simulation { startTime :: Double
@@ -77,19 +91,20 @@ data Simulation = Simulation { startTime :: Double
                              , system    :: SSystem Double
                              }
 
+
 instance TaylorCompat Simulation where
-  taylorSource (Simulation st ss ns at rt sy) =
-    intercalate ";\n" [ append "start_time=" (repr st)
-                      , append "step_size=" (repr ss)
-                      , append "number_of_steps=" (repr ns)
-                      , append "absolute_error_tolerance=" (repr at)
-                      , append "relative_error_tolerance=" (repr rt)
-                      , taylorSource sy]
+  taylorDecls (Simulation st ss ns abt rlt sy) =
+    [ "start_time="               `append` repr st
+    , "step_size="                `append` repr ss
+    , "number_of_steps="          `append` repr ns
+    , "absolute_error_tolerance=" `append` repr abt
+    , "relative_error_tolerance=" `append` repr rlt]
+    ++ taylorDecls sy
 
 simOptions :: Parser (SSystem Double -> Simulation)
-simOptions = Simulation <$> optDouble "Start" 's' "Start time for simulation"
-                        <*> optDouble "Step" 'z' "Step size"
-                        <*> optInt "Steps" 'n' "Number of steps"
+simOptions = Simulation <$> optDouble "Start"  's' "Start time for simulation"
+                        <*> optDouble "Step"   'z' "Step size"
+                        <*> optInt    "Steps"  'n' "Number of steps"
                         <*> optDouble "AbsTol" 'a' "Absolute tolerance"
                         <*> optDouble "RelTol" 'r' "Relative tolerance"
 
@@ -115,3 +130,9 @@ simMemo model = memo (\ns -> (echo . repr) ns >> model ns >>= runSolver)
 runMemo :: (Monoid m, Monad f)
         => StateT m f a -> f a
 runMemo = flip evalStateT mempty
+
+withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem Double)
+withParams s =
+  maybe (Left err) Right .
+    evalSource (traverse (either pure (const pop)) s) where
+      err = "Mismatched params"

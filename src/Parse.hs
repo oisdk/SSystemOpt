@@ -1,85 +1,94 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TupleSections       #-}
-
 module Parse
-       ( Parser
-       , ODE(..)
-       , InitialDeclaration(..)
+       ( parseSystem
        , parseTester
-       , parseSystem
+       , expr
+       , numLearn
+       , ode
        ) where
 
-import           Control.Applicative        hiding (optional)
-import           Control.Arrow              ((***))
-import           Control.Monad.Identity     (Identity)
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
 import           Control.Monad.State
-import           Data.Either                (partitionEithers)
-import           Data.Foldable
-import           Data.Functor               (($>))
-import           Data.List                  (sortOn, uncons)
-import           Data.Text                  (Text)
+import           Data.Functor
+import           Data.Map.Strict     (Map)
+import qualified Data.Map.Strict     as Map
+import           Data.Maybe
+import           Data.Text           (Text)
 import           Expr
-import           Prelude                    hiding (unlines, (^))
+import           Prelude             hiding (unlines, (^), (/))
+import           Square
 import           SSystem
-import           Text.Parsec                hiding (State, many, uncons, (<|>))
+import           Text.Parsec         hiding (State, many, optional, uncons,
+                                      (<|>))
 import           Text.Parsec.Expr
-import qualified Text.Parsec.Token          as Token
+import qualified Text.Parsec.Token   as Token
 import           Utils
 
-type Parser = Parsec Text ()
+data ODE =
+  ODE { _posFac :: Maybe NumLearn
+      , _posExp :: Map String NumLearn
+      , _negFac :: Maybe NumLearn
+      , _negExp :: Map String NumLearn
+      } deriving Show
 
-class Parse a where
-  parser :: Parser a
+makeLenses ''ODE
+
+data ParseState =
+  ParseState { _odes     :: Map String ODE
+             , _initials :: Map String Expr
+             }
+
+makeLenses ''ParseState
+
+beginState :: ParseState
+beginState = ParseState Map.empty Map.empty
+
+
+type Parser = ParsecT Text () Identity
 
 -- | Language Definition
 languageDef :: Token.GenLanguageDef Text st Identity
-languageDef = Token.LanguageDef { Token.commentStart   = ""
-                                , Token.commentEnd     = ""
-                                , Token.commentLine    = "//"
-                                , Token.nestedComments = True
-                                , Token.identStart     = letter
-                                , Token.identLetter    = alphaNum
-                                , Token.opStart        = Token.opLetter languageDef
-                                , Token.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
-                                , Token.reservedOpNames= [ "+", "*", "=", "-", "^", "->", ".."
-                                                         ] ++ funcNames
-                                , Token.reservedNames  = [ "start", "stop", "absTolerance"
-                                                         , "relTolerance", "ddt", "steps", "stepsize"
-                                                         ] ++ funcNames
-                                , Token.caseSensitive  = True
-                                } where funcNames = map show allFuncs
+languageDef =
+  Token.LanguageDef
+    { Token.commentStart   = ""
+    , Token.commentEnd     = ""
+    , Token.commentLine    = "//"
+    , Token.nestedComments = True
+    , Token.identStart     = letter
+    , Token.identLetter    = alphaNum
+    , Token.opStart        = Token.opLetter languageDef
+    , Token.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
+    , Token.reservedOpNames= [ "+", "*", "=", "-", "^", "->", "..", "/"
+                              ] ++ funcNames
+    , Token.reservedNames  = "ddt" : funcNames
+    , Token.caseSensitive  = True
+    } where funcNames = map show allFuncs
 
 -- Derived Parsers
-lexer                :: Token.GenTokenParser Text st Identity
+lexer :: Token.GenTokenParser Text () Identity
 reservedOp, reserved :: String -> Parser ()
-parens, bracks       :: Parser a -> Parser a
-semiSep1, commaSep   :: Parser a -> Parser [a]
-function             :: Func -> Operator Text () Identity Expr
-identifier           :: Parser String
-whiteSpace, star, carat, hyph :: Parser ()
-pnegate              :: Num a => Parser (a -> a)
-double               :: Parser Double
-integer              :: Parser Integer
-lexer      = Token.makeTokenParser languageDef
+semiSep1 :: Parser a -> Parser [a]
+function :: Func -> Operator Text () Identity Expr
+identifier :: Parser String
+whiteSpace, star, carat, hyph, eqsn, dots :: Parser ()
+double :: Parser Double
+lexer = Token.makeTokenParser languageDef
 reservedOp = Token.reservedOp lexer
 identifier = Token.identifier lexer
-parens     = Token.parens     lexer
-bracks     = Token.brackets   lexer
-reserved   = Token.reserved   lexer
+reserved = Token.reserved lexer
 whiteSpace = Token.whiteSpace lexer
-semiSep1   = Token.semiSep1   lexer
-commaSep   = Token.commaSep   lexer
-double     = Token.float      lexer
-integer    = Token.integer    lexer
-pnegate    = reservedOp "-" $> negate <|> pure id
-star       = reservedOp "*"
-carat      = reservedOp "^"
-hyph       = reservedOp "-"
-
-instance Parse Double where
-  parser = pnegate <*> (try double <|> fromInteger <$> integer)
-
+semiSep1 = Token.semiSep1 lexer
+star = reservedOp "*"; carat = reservedOp "^"
+hyph = reservedOp "-"; eqsn = reservedOp "="
+dots = reservedOp ".."
+double = hyph *> (negate <$> num) <|> num  where
+  num = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
 function f = Prefix $ (reservedOp . show) f $> app f
 
 -- Operator Table
@@ -87,68 +96,96 @@ operators :: OperatorTable Text () Identity Expr
 operators =  [ map function allFuncs
              , [Prefix (reservedOp "-" $> negate)]
              , [Infix  (reservedOp "^" $> (^)) AssocRight]
+             , [Infix  (reservedOp "/" $> (/)) AssocLeft ]
              , [Infix  (reservedOp "*" $> (*)) AssocLeft ]
              , [Infix  (reservedOp "-" $> (-)) AssocLeft ]
-             , [Infix  (reservedOp "+" $> (+)) AssocLeft ]
-             ]
+             , [Infix  (reservedOp "+" $> (+)) AssocLeft ] ]
 
 term :: Parser Expr
-term = parens parser <|> fromDouble <$> parser
+term = Token.parens lexer expr <|> fmap fromDouble double
 
-instance Parse Expr where
-  parser = buildExpressionParser operators term
+expr :: Parser Expr
+expr = buildExpressionParser operators term
 
-instance Parse NumLearn where
-  parser = fmap NumLearn (fmap Right parser <|> fmap Left parser)
+listOf :: Enum a => Parser a -> Parser [a]
+listOf parser = Token.brackets lexer (unenum =<< Token.commaSep lexer parser) where
+  unenum [x] = dots *> fmap (enumFromTo x) parser <|> pure [x]
+  unenum [x,y] = dots *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
+  unenum xs = pure xs
 
-instance Parse InitialDeclaration where
-  parser = ID <$> identifier <* reservedOp "=" <*> parser
+numLearn :: Parser NumLearn
+numLearn = eitherA double (listOf double)
 
-instance (Parse a, Enum a) => Parse [a] where
-    parser = bracks $ f =<< commaSep parser where
-      f [x] = reservedOp ".." *> fmap (enumFromTo x) parser <|> pure [x]
-      f [x,y] = reservedOp ".." *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
-      f xs = pure xs
+odeTup :: (Maybe NumLearn, Map String NumLearn)
+       -> (Maybe NumLearn, Map String NumLearn)
+       -> ODE
+odeTup (a,b) (c,d) = ODE a b c d
 
-instance Parse ODE where
-  parser = liftA2 uncurry (liftA2 uncurry (fmap ODE var) lhs) rhs where
-    lhs = notFollowedBy hyph *> lst <|> emt
-    rhs = hyph *> lst <|> emt
-    var = try (reserved "ddt") *> identifier <* reservedOp "="
-    fac = (parser <* optional star) <|> static 1
-    emt = (,) <$> static 0 <*> pure []
-    lst = (,) <$> fac <*> (sepBy trm star >>= uni)
-    uni = either unexpected pure . sortUniques
-    trm = (,) <$> identifier <*> (carat *> parser <|> static 1)
+ode :: Parser ODE
+ode = odeTup <$> side
+             <*> (hyph *> side <|> emptySide) where
+  term' = (,) <$> identifier <*> defExp
+  defExp = (carat *> numLearn) <|> pure (Left 1)
+  side = (,) <$> fmap Just numLearn
+             <*> (Map.fromList <$> many (star *> term'))
+             <|> ((,) Nothing . Map.fromList)
+             <$> sepBy term' star
+  emptySide = pure (Nothing, Map.empty)
 
-static :: Applicative f => Double -> f NumLearn
-static = pure . NumLearn . Left
+parseOde :: Parser (String, ODE)
+parseOde = (,) <$> (reserved "ddt" *> identifier) <*> (eqsn *> ode)
 
-data InitialDeclaration = ID { idName :: String
-                             , idVal  :: NumLearn
-                             } deriving (Eq, Show)
+parseInitialValue :: Parser (String, Expr)
+parseInitialValue = (,) <$> identifier <*> (eqsn *> expr)
 
-data ODE = ODE { odeName   :: String
-               , odePosFac :: NumLearn
-               , odePosExp :: [(String,NumLearn)]
-               , odeNegFac :: NumLearn
-               , odeNegExp :: [(String, NumLearn)]
-               } deriving (Eq, Show)
+type FillState a = StateT (Square (NumLearn,NumLearn)) (Either String) a
+
+fillSSystem :: Map String (ODE, Expr) -> FillState [STerm NumLearn]
+fillSSystem m = itraverse fill vals where
+  vals = Map.toList m
+  idxs = Map.fromList (imap (\i (n,_) -> (n,i)) vals)
+  fill i (n, (ODE pf_ pe_ nf_ ne_, e)) = do
+    updSquare pe_ i _1
+    updSquare ne_ i _2
+    let pf = fromMaybe (Left $ bool 0 1 (Map.null pe_)) pf_
+    let nf = fromMaybe (Left $ bool 0 1 (Map.null ne_)) nf_
+    iv <- lift $ safeEval e
+    pure $ STerm pf nf (Left iv) n
+  updSquare :: Map String NumLearn
+            -> Int
+            -> Lens' (NumLearn,NumLearn) NumLearn
+            -> FillState ()
+  updSquare p i s = forM_ (Map.toList p) $ \(en,ev) -> do
+      j <- maybe (lift . Left . err $ en) pure (Map.lookup en idxs)
+      ix (i,j) . s .= ev
+  err :: String -> String
+  err en = "Variable without ode: " ++ en
+
+toSSystem :: ParseState -> Either String (SSystem NumLearn)
+toSSystem (ParseState o i) = do
+  let err xs = "Equations not matched: " ++ show xs
+  m <- over _Left err $ mergeMatch (,) o i
+  let n = Map.size m
+  let s = runIdentity $ create n (Identity (Left 0, Left 0))
+  (trms,exps) <- runStateT (fillSSystem m) s
+  pure $ SSystem exps trms
+
+parseLines :: Parser [Either (String, ODE) (String, Expr)]
+parseLines = whiteSpace *> semiSep1 (eitherA parseOde parseInitialValue)
 
 parseSystem :: String -> Text -> Either String (SSystem NumLearn)
-parseSystem s t = fromParsed =<< mapLeft show (runParser (whiteSpace *> semiSep1 (eitherA parser parser)) () s t)
-
-fromParsed :: [Either InitialDeclaration ODE] -> Either String (SSystem NumLearn)
-fromParsed = fmap SSystem . uncurry f . (sortOn idName *** sortOn odeName) . partitionEithers where
-  prepZero x = NumLearn (Left 0.0) : x
-  nextVar = StateT (maybe (Left "ODE too long") Right . uncons)
-  f i = zipWithM g i where
-    vars = map idName i
-    g (ID b v) (ODE a pf pe nf ne)
-      | a == b = STerm pf nf <$> h pe <*> h ne <*> pure v
-      | otherwise = (Left . unwords) ["Variables", a, "and", b, "mismatched."]
-    h = fmap concat . flip evalStateT vars . traverse (uncurry j)
-    j w n = go where go = nextVar >>= bool (pure [n]) (fmap prepZero go) . (w==)
+parseSystem s =
+  toSSystem <=<
+  flip execStateT beginState .
+  traverse (either (upd odes) (upd initials)) <=<
+  over _Left show . parse parseLines s where
+    upd :: Lens' ParseState (Map String a)
+        -> (String, a)
+        -> StateT ParseState (Either String) ()
+    upd l (n,v) = do
+      seen <- uses (l . at n) isJust
+      when seen . lift . Left $ "Duplicate equations for " ++ n
+      l . at n ?= v
 
 -- Utility
 
@@ -156,10 +193,6 @@ allFuncs :: [Func]
 allFuncs = [minBound..maxBound]
 
 parseTester :: (Show a, Eq a) => Parser a -> a -> Text -> Maybe String
-parseTester p e s = either (Just . show) f (runParser p () "testing" s) where
+parseTester p e s = either (Just . show) f (parse p "testing" s) where
   f r | r == e = Nothing
       | otherwise = Just $ "Expected: " ++ show e ++ "\n" ++ "Received: " ++ show r
-
-mapLeft :: (a -> b) -> Either a c -> Either b c
-mapLeft f (Left x) = Left (f x)
-mapLeft _ (Right x) = Right x

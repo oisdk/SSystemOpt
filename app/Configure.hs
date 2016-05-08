@@ -3,13 +3,13 @@
 module Main where
 
 import           Control.Applicative
+import           Control.Lens        hiding (strict, view)
 import           Control.Monad.State
 import           Data.Text           (unpack)
 import           Parse               (parseSystem)
 import           Prelude             hiding (FilePath)
 import           Search
 import           Solver
-import           SSystem
 import           Turtle              (FilePath, Parser, echo, format, fp, input,
                                       optPath, options, stdin, strict, view)
 import           Utils
@@ -30,7 +30,7 @@ main = view $ do
   let desc = maybe "SSystem code from stdin" (unpack . format fp) l
   model <- toDie (parseSystem desc modelCode)
   let simulator = simMemo (fmap config . toDie . withParams model)
-  final <- runMemo $ search simulator simulation (getParams model)
+  final <- runMemo $ search simulator simulation (model ^.. folded._Right)
   echo "Final exponents:"
   pure final
 
