@@ -8,7 +8,7 @@ simData simData20,21
 main main22,23
 main main23,24
 
-./src/Expr.hs,1801
+./src/Expr.hs,1751
 import import20,21
 cataM cataM37,38
 anaM anaM45,46
@@ -20,8 +20,6 @@ pzipo pzipo64,65
 pzipo pzipo69,70
 hzipo hzipo71,72
 hzipo hzipo74,75
-approxEq approxEq77,78
-approxEq approxEq78,79
 data ExprF ExprF85,86
 data ExprF r = CstF CstF85,86
              | FncF FncF86,87
@@ -271,45 +269,41 @@ data SSystem SSystem33,34
           , _terms _terms35,36
 type NumLearn NumLearn48,49
 
-./src/Utils.hs,1037
+./src/Utils.hs,910
 module Utils Utils2,3
-insertUnique insertUnique11,12
-insertUnique insertUnique12,13
-sortUniques sortUniques16,17
-sortUniques sortUniques17,18
-mergeMatch mergeMatch19,20
-mergeMatch mergeMatch24,25
-bool bool28,29
-bool bool29,30
-uniqNames uniqNames32,33
-uniqNames uniqNames33,34
-eitherA eitherA35,36
-eitherA eitherA36,37
-toDie toDie38,39
-toDie toDie39,40
-eitherToMaybe eitherToMaybe41,42
-eitherToMaybe eitherToMaybe42,43
-replicateA replicateA45,46
-replicateA replicateA46,47
-minOnA minOnA50,51
-minOnA minOnA51,52
-minByM minByM58,59
-minByM minByM59,60
-symmetricDifference symmetricDifference66,67
-symmetricDifference symmetricDifference70,71
-newtype List List73,74
-  List List74,75
-  List { runList runList74,75
-fromFoldable fromFoldable77,78
-fromFoldable fromFoldable78,79
-instance instance80,81
-newtype Source Source89,90
-  Source Source90,91
-  Source { runSource runSource90,91
-pop pop93,94
-pop pop94,95
-evalSource evalSource101,102
-evalSource evalSource102,103
+import import6,7
+insertUnique insertUnique13,14
+insertUnique insertUnique14,15
+sortUniques sortUniques18,19
+sortUniques sortUniques19,20
+mergeMatch mergeMatch21,22
+mergeMatch mergeMatch26,27
+bool bool30,31
+bool bool31,32
+uniqNames uniqNames34,35
+uniqNames uniqNames35,36
+eitherA eitherA37,38
+eitherA eitherA38,39
+toDie toDie40,41
+toDie toDie41,42
+eitherToMaybe eitherToMaybe43,44
+eitherToMaybe eitherToMaybe44,45
+replicateA replicateA47,48
+replicateA replicateA48,49
+minOnA minOnA52,53
+minOnA minOnA53,54
+minByM minByM60,61
+minByM minByM61,62
+symmetricDifference symmetricDifference68,69
+symmetricDifference symmetricDifference72,73
+newtype Source Source74,75
+  Source Source75,76
+  Source { runSource runSource75,76
+pop pop78,79
+pop pop79,80
+instance instance83,84
+evalSource evalSource88,89
+evalSource evalSource89,90
 
 ./test/ssystems-tests.hs,1088
 module Main Main2,3

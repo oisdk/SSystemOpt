@@ -132,7 +132,7 @@ runMemo :: (Monoid m, Monad f)
         => StateT m f a -> f a
 runMemo = flip evalStateT mempty
 
-withParams :: Foldable f => SSystem NumLearn -> f Double -> Either String (SSystem Double)
+withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem Double)
 withParams s =
   maybe (Left err) Right .
     evalSource (traverse (either pure (const pop)) s) where

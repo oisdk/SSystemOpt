@@ -75,10 +75,10 @@ hzipo :: (Functor.Foldable g, Functor.Foldable h)
 hzipo alg = histo zalg where
   zalg x = alg x . (para . fmap . uncurry) (:<)
 
-approxEq :: Expr -> Expr -> Bool
-approxEq = hzipo alg where
-  alg (CstF a) (CstF b) = True
-  alg (SumF (SumF a b :< c) r) (SumF)
+-- approxEq :: Expr -> Expr -> Bool
+-- approxEq = hzipo alg where
+--   alg (CstF a) (CstF b) = True
+--   alg (SumF (SumF a b :< c) r) (SumF)
 
 
 
