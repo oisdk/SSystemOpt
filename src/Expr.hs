@@ -1,10 +1,10 @@
-{-# LANGUAGE DeriveFoldable       #-}
-{-# LANGUAGE DeriveFunctor        #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE DeriveTraversable    #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE LambdaCase           #-}
-{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module Expr
   ( Expr(..)
@@ -29,16 +29,16 @@ module Expr
   , cataM
   ) where
 
-import           Control.Monad          ((<=<))
+import           Control.Monad         ((<=<))
+import           Data.Functor          (void)
+import           Data.Functor.Foldable hiding (Foldable, fold, unfold)
+import qualified Data.Functor.Foldable as F
 import           Data.Serialize
-import           Data.Functor           (void)
-import           Data.Functor.Foldable  hiding (Foldable, fold, unfold)
-import qualified Data.Functor.Foldable  as F
 import           GHC.Generics
-import           Prelude                hiding (atan, cos, cosh, exp, log, sin,
-                                         sinh, tan, tanh, (^), (/))
-import qualified Prelude                as P
-
+import           Prelude               hiding (atan, cos, cosh, exp, log, sin,
+                                        sinh, tan, tanh, (/), (^))
+import qualified Prelude               as P
+import           Test.QuickCheck
 -- | A monadic catamorphism.
 cataM
   :: (F.Foldable t, Traversable (Base t), Monad m)
@@ -68,8 +68,27 @@ data ExprF r = CstF Double
 -- An Expression type
 newtype Expr = Expr { getExpr :: Fix ExprF } deriving (Eq, Generic)
 
+type instance Base Expr = ExprF
+instance F.Foldable Expr where project = fmap Expr . project . getExpr
+instance Unfoldable Expr where embed = Expr . embed . fmap getExpr
+
+arbAlg :: Int -> Gen (ExprF Int)
+arbAlg size
+  | size <= 1 = (CstF . abs) <$> arbitrary
+  | otherwise = oneof
+    [ (CstF . abs) <$> arbitrary
+    , flip FncF r <$> arbitrary
+    , pure $ NegF r
+    , pure $ PowF r r
+    , pure $ DivF r r
+    , pure $ PrdF r  r
+    , pure $ SumF r r
+    ] where r = size `div` 4
+
+instance Arbitrary Expr where arbitrary = sized (anaM arbAlg)
+
 instance Serialize Expr where
-  put = cata alg . getExpr where
+  put = cata alg where
     alg = \case
       CstF d   -> putWord8 0 *> put d
       FncF f x -> putWord8 1 *> put f *> x
@@ -78,7 +97,7 @@ instance Serialize Expr where
       DivF x y -> putWord8 4 *> x *> y
       PrdF x y -> putWord8 5 *> x *> y
       SumF x y -> putWord8 6 *> x *> y
-  get = Expr <$> anaM (const (getWord8 >>= alg)) () where
+  get = anaM (const (getWord8 >>= alg)) () where
     alg = \case
       0 -> CstF <$> get
       1 -> flip FncF () <$> get
@@ -101,6 +120,8 @@ data Func = Sin
           | Csh
           | Tnh
           deriving (Eq, Ord, Enum, Bounded, Generic)
+
+instance Arbitrary Func where arbitrary = arbitraryBoundedEnum
 
 instance Serialize Func
 -- Applies a function to a value
@@ -153,7 +174,7 @@ cosh = app Csh
 tanh = app Tnh
 
 eval :: Expr -> Double
-eval = cata evalAlg . getExpr
+eval = cata evalAlg
 
 evalAlg :: ExprF Double -> Double
 evalAlg = \case
@@ -171,14 +192,14 @@ safeEvalAlg = \case
   e -> Right (evalAlg e)
 
 safeEval :: Expr -> Either String Double
-safeEval = cataM safeEvalAlg . getExpr
+safeEval = cataM safeEvalAlg
 
-instance Show Expr where showsPrec _ = zygo void (pprAlg ((<) . void)) . getExpr
+instance Show Expr where showsPrec _ = zygo void (pprAlg ((<) . void))
 
 pprAlg :: (ExprF (t, ShowS) -> t -> Bool) -> ExprF (t, ShowS) -> ShowS
 pprAlg cmp e = case e of
   CstF i   -> shows i
-  NegF a   -> showChar '-' . par a
+  NegF a   -> showString "- " . par a
   SumF a b -> par a . showString " + " . par b
   DivF a b -> par a . showString " / " . par b
   PrdF a b -> par a . showString " * " . par b
@@ -187,10 +208,10 @@ pprAlg cmp e = case e of
   where par (c,p) = showParen (cmp e c) p
 
 instance Num Expr where
-  fromInteger     = Expr . ana CstF . fromInteger
+  fromInteger     = ana CstF . fromInteger
   Expr a + Expr b = (Expr . Fix) (SumF a b)
   Expr a * Expr b = (Expr . Fix) (PrdF a b)
   abs e           = if eval e < 0 then negate e else e
-  signum          = Expr . ana CstF . signum . eval
+  signum          = ana CstF . signum . eval
   negate          = Expr . Fix . NegF . getExpr
 

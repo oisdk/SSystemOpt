@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Search
@@ -6,12 +6,12 @@ module Search
        ) where
 
 import           Control.Applicative (liftA2)
+import           Control.Monad
 import           Data.Foldable
 import           Data.Function       (on)
 import           Data.List           (sortOn)
 import qualified Data.Map            as Map
 import           Utils
-import Control.Monad
 
 
 eachNext :: Int -> a -> a -> [[a]]

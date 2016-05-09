@@ -9,6 +9,7 @@ module Parse
        , expr
        , numLearn
        , ode
+       , Parser
        ) where
 
 import           Control.Applicative
@@ -16,12 +17,13 @@ import           Control.Lens
 import           Control.Monad
 import           Control.Monad.State
 import           Data.Functor
+import           Data.List
 import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe
-import           Data.Text           (Text)
+import           Data.Text           (Text, pack)
 import           Expr
-import           Prelude             hiding (unlines, (^), (/))
+import           Prelude             hiding (unlines, (/), (^))
 import           Square
 import           SSystem
 import           Text.Parsec         hiding (State, many, optional, uncons,
@@ -29,7 +31,7 @@ import           Text.Parsec         hiding (State, many, optional, uncons,
 import           Text.Parsec.Expr
 import qualified Text.Parsec.Token   as Token
 import           Utils
-
+import Data.Ord
 data ODE =
   ODE { _posFac :: Maybe NumLearn
       , _posExp :: Map String NumLearn
@@ -87,16 +89,15 @@ semiSep1 = Token.semiSep1 lexer
 star = reservedOp "*"; carat = reservedOp "^"
 hyph = reservedOp "-"; eqsn = reservedOp "="
 dots = reservedOp ".."
-double = hyph *> (negate <$> num) <|> num  where
-  num = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
-function f = Prefix $ (reservedOp . show) f $> app f
+double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
+function f = Prefix $ (try . reservedOp . show) f $> app f
 
 -- Operator Table
 operators :: OperatorTable Text () Identity Expr
-operators =  [ map function allFuncs
+operators =  [ map function (sortOn (Down . length . show) allFuncs)
              , [Prefix (reservedOp "-" $> negate)]
              , [Infix  (reservedOp "^" $> (^)) AssocRight]
-             , [Infix  (reservedOp "/" $> (/)) AssocLeft ]
+             , [Infix  (reservedOp "/" $> (/)) AssocRight]
              , [Infix  (reservedOp "*" $> (*)) AssocLeft ]
              , [Infix  (reservedOp "-" $> (-)) AssocLeft ]
              , [Infix  (reservedOp "+" $> (+)) AssocLeft ] ]
@@ -192,7 +193,5 @@ parseSystem s =
 allFuncs :: [Func]
 allFuncs = [minBound..maxBound]
 
-parseTester :: (Show a, Eq a) => Parser a -> a -> Text -> Maybe String
-parseTester p e s = either (Just . show) f (parse p "testing" s) where
-  f r | r == e = Nothing
-      | otherwise = Just $ "Expected: " ++ show e ++ "\n" ++ "Received: " ++ show r
+parseTester :: Parser a -> String -> Either String a
+parseTester p = over _Left show . parse (whiteSpace *> p <* eof) "testing" . pack

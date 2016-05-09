@@ -7,7 +7,10 @@ import           Control.Monad
 import           Data.Functor
 import           Data.Ord
 import           Data.Serialize           (Serialize, decode, encode)
+import           Expr
+import           Parse
 import           Square
+import           SSystem
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
@@ -42,8 +45,20 @@ prop_Ordering s t = classify (c==EQ) "Same size squares" . classify (c/=EQ) "Dif
       c = comparing _squareSize s t
       r = compare s t
 
-prop_Serialize :: Square Int -> P.Result
-prop_Serialize = checkSerialize
+prop_BinSquare :: Square Int -> P.Result
+prop_BinSquare = checkSerialize
+
+prop_BinSSystem :: SSystem Int -> P.Result
+prop_BinSSystem = checkSerialize
+
+prop_BinExpr :: Expr -> P.Result
+prop_BinExpr = checkSerialize
+
+checkParse :: Parser a -> (a -> String) -> (a -> String) -> (a -> a -> Bool) -> a -> P.Result
+checkParse p d s e x = either failWith eq (parseTester p (s x)) where
+  eq y | e x y = P.succeeded
+       | otherwise = failWith . concat $
+         ["Got: ", d y, "\n", "Expected: ", d x]
 
 sameResult :: Eq a => (b -> a) -> (b -> a) -> b -> Bool
 sameResult = liftA2 (==)

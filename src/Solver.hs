@@ -13,7 +13,6 @@ module Solver
 import           Control.Lens        hiding (strict)
 import           Control.Monad.State
 import           Data.Map.Strict     (Map)
-import qualified Data.Map.Strict     as M
 import           Data.Maybe
 import           Data.Text           (append, concat, intercalate, pack)
 import qualified Data.Text           as Text
@@ -27,8 +26,7 @@ import           Turtle              (Parser, Shell, Text, echo, empty, format,
                                       strict, using)
 import           Utils
 -- | A typeclass for types with a representation in Taylor source code
-class TaylorCompat a where
-  taylorDecls :: a -> [Text]
+class TaylorCompat a where taylorDecls :: a -> [Text]
 
 taylorSource :: TaylorCompat a => a -> Text
 taylorSource = concat . map (`append` ";\n") . taylorDecls
@@ -63,11 +61,11 @@ instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
       "initial_values=" `append` intercalate ", " (repr._initial <$> t)
     derivs (SSystem sq t) = imap f (zip uniqNames t) where
       f i (c, STerm post negt _ _) =
-        concat ["diff(", pack c, ", t) = ", g post negt] where
-          g 0 0 = "0"
-          g 0 n = " - " `append` showSide n (side _2)
-          g n 0 = showSide n (side _1)
-          g n m = concat [showSide n (side _1), " - ", showSide m (side _2)]
+        concat ["diff(", pack c, ", t) = ", showOde post negt] where
+          showOde 0 0 = "0"
+          showOde 0 n = " - " `append` showSide n (side _2)
+          showOde n 0 = showSide n (side _1)
+          showOde n m = concat [showSide n (side _1), " - ", showSide m (side _2)]
           showSide 1 [] = "1"
           showSide 1 xs = intercalate " * " xs
           showSide n l = repr n `append` prepToAll " * " l
@@ -83,13 +81,13 @@ prepToAll y (x:xs) = intercalate y (append y x : xs)
 
 
 -- | The full information needed to run a Taylor simulation
-data Simulation = Simulation { startTime :: Double
-                             , stepSize  :: Double
-                             , nSteps    :: Int
-                             , absTol    :: Double
-                             , relTol    :: Double
-                             , system    :: SSystem Double
-                             }
+data Simulation =
+  Simulation { startTime :: Double
+             , stepSize  :: Double
+             , nSteps    :: Int
+             , absTol    :: Double
+             , relTol    :: Double
+             , system    :: SSystem Double}
 
 
 instance TaylorCompat Simulation where
@@ -110,11 +108,14 @@ simOptions = Simulation <$> optDouble "Start"  's' "Start time for simulation"
 
 -- | Memoizes a function using the state transformer monad
 memo :: (Monad m, Ord a) => (a -> m b) -> a -> StateT (Map a b) m b
-memo f x = gets (M.lookup x) >>= maybe new pure where
-  new = do
-    y <- lift (f x)
-    modify (M.insert x y)
-    pure y
+-- memo f x = maybe ((at x <?=) =<< lift (f x)) pure =<< use (at x)
+memo f x = do
+  old <- use (at x)
+  case old of
+    Just y -> pure y
+    Nothing -> do
+      y <- lift (f x)
+      at x <?= y
 
 -- | Parses the output from a Taylor simulation
 parseOut :: Text -> Either String [[Double]]
@@ -125,7 +126,7 @@ parseOut = (traverse.traverse) (fmap fst . double)
 simMemo :: ([Double] -> Shell Simulation)
         -> [Double]
         -> StateT (Map [Double] (Maybe [[Double]])) Shell (Maybe [[Double]])
-simMemo model = memo (\ns -> (echo . repr) ns >> model ns >>= runSolver)
+simMemo model = memo (\ns -> (echo . repr) ns *> model ns >>= runSolver)
 
 runMemo :: (Monoid m, Monad f)
         => StateT m f a -> f a

@@ -8,7 +8,7 @@ simData simData20,21
 main main22,23
 main main23,24
 
-./src/Expr.hs,1636
+./src/Expr.hs,1754
 import import31,32
 cataM cataM47,48
 anaM anaM55,56
@@ -23,128 +23,132 @@ data ExprF r = CstF CstF58,59
 newtype Expr Expr68,69
 newtype Expr = Expr Expr68,69
 newtype Expr = Expr { getExpr getExpr68,69
-instance instance70,71
-data Func Func93,94
-data Func = SinSin93,94
-          | CosCos94,95
-          | ExpExp95,96
-          | LogLog96,97
-          | TanTan97,98
-          | AtnAtn98,99
-          | SnhSnh99,100
-          | CshCsh100,101
-          | TnhTnh101,102
-appF appF106,107
-appF appF107,108
-(^)^131,132
-Expr Expr132,133
-(/)/134,135
-app app136,137
-app app137,138
-fromDouble fromDouble138,139
-fromDouble fromDouble139,140
-sin, cos, exp, log, tan, atan, sinh, cosh, tanh tanh143,144
-sin, cos, exp, log, tan, atan, sinh, cosh,cosh143,144
-sin, cos, exp, log, tan, atan, sinh,sinh143,144
-sin, cos, exp, log, tan, atan,atan143,144
-sin, cos, exp, log, tan,tan143,144
-sin, cos, exp, log,log143,144
-sin, cos, exp,exp143,144
-sin, cos,cos143,144
-sin,sin143,144
-sin sin144,145
-cos cos145,146
-exp exp146,147
-log log147,148
-tan tan148,149
-atan atan149,150
-sinh sinh150,151
-cosh cosh151,152
-tanh tanh152,153
-eval eval154,155
-eval eval155,156
-evalAlg evalAlg157,158
-evalAlg evalAlg158,159
-safeEvalAlg safeEvalAlg167,168
-safeEvalAlg safeEvalAlg168,169
-safeEval safeEval172,173
-safeEval safeEval173,174
-pprAlg pprAlg177,178
-pprAlg pprAlg178,179
+type instance instance70,71
+type instance Base Base70,71
+instance instance71,72
+arbAlg arbAlg74,75
+arbAlg arbAlg75,76
+data Func Func112,113
+data Func = SinSin112,113
+          | CosCos113,114
+          | ExpExp114,115
+          | LogLog115,116
+          | TanTan116,117
+          | AtnAtn117,118
+          | SnhSnh118,119
+          | CshCsh119,120
+          | TnhTnh120,121
+appF appF127,128
+appF appF128,129
+(^)^152,153
+Expr Expr153,154
+(/)/155,156
+app app157,158
+app app158,159
+fromDouble fromDouble159,160
+fromDouble fromDouble160,161
+sin, cos, exp, log, tan, atan, sinh, cosh, tanh tanh164,165
+sin, cos, exp, log, tan, atan, sinh, cosh,cosh164,165
+sin, cos, exp, log, tan, atan, sinh,sinh164,165
+sin, cos, exp, log, tan, atan,atan164,165
+sin, cos, exp, log, tan,tan164,165
+sin, cos, exp, log,log164,165
+sin, cos, exp,exp164,165
+sin, cos,cos164,165
+sin,sin164,165
+sin sin165,166
+cos cos166,167
+exp exp167,168
+log log168,169
+tan tan169,170
+atan atan170,171
+sinh sinh171,172
+cosh cosh172,173
+tanh tanh173,174
+eval eval175,176
+eval eval176,177
+evalAlg evalAlg178,179
+evalAlg evalAlg179,180
+safeEvalAlg safeEvalAlg188,189
+safeEvalAlg safeEvalAlg189,190
+safeEval safeEval193,194
+safeEval safeEval194,195
+pprAlg pprAlg198,199
+pprAlg pprAlg199,200
 
 ./src/Parse.hs,2036
 module ParseParse5,6
-data ODE ODE32,33
-  ODE ODE33,34
-  ODE { _posFac _posFac33,34
-      , _posExp _posExp34,35
-      , _negFac _negFac35,36
-      , _negExp _negExp36,37
-data ParseState ParseState41,42
-  ParseState ParseState42,43
-  ParseState { _odes _odes42,43
-             , _initials _initials43,44
-beginState beginState48,49
-beginState beginState49,50
-type Parser Parser52,53
-languageDef languageDef55,56
-languageDef languageDef56,57
-lexer lexer73,74
-reservedOp, reserved reserved74,75
-reservedOp,reservedOp74,75
-semiSep1 semiSep175,76
-function function76,77
-identifier identifier77,78
-whiteSpace, star, carat, hyph, eqsn, dots dots78,79
-whiteSpace, star, carat, hyph, eqsn,eqsn78,79
-whiteSpace, star, carat, hyph,hyph78,79
-whiteSpace, star, carat,carat78,79
-whiteSpace, star,star78,79
-whiteSpace,whiteSpace78,79
-double double79,80
-lexer lexer80,81
-reservedOp reservedOp81,82
-identifier identifier82,83
-reserved reserved83,84
-whiteSpace whiteSpace84,85
-semiSep1 semiSep185,86
-star star86,87
-hyph hyph87,88
-dots dots88,89
-double double89,90
-function function91,92
-operators operators94,95
+data ODE ODE34,35
+  ODE ODE35,36
+  ODE { _posFac _posFac35,36
+      , _posExp _posExp36,37
+      , _negFac _negFac37,38
+      , _negExp _negExp38,39
+data ParseState ParseState43,44
+  ParseState ParseState44,45
+  ParseState { _odes _odes44,45
+             , _initials _initials45,46
+beginState beginState50,51
+beginState beginState51,52
+type Parser Parser54,55
+languageDef languageDef57,58
+languageDef languageDef58,59
+lexer lexer75,76
+reservedOp, reserved reserved76,77
+reservedOp,reservedOp76,77
+semiSep1 semiSep177,78
+function function78,79
+identifier identifier79,80
+whiteSpace, star, carat, hyph, eqsn, dots dots80,81
+whiteSpace, star, carat, hyph, eqsn,eqsn80,81
+whiteSpace, star, carat, hyph,hyph80,81
+whiteSpace, star, carat,carat80,81
+whiteSpace, star,star80,81
+whiteSpace,whiteSpace80,81
+double double81,82
+lexer lexer82,83
+reservedOp reservedOp83,84
+identifier identifier84,85
+reserved reserved85,86
+whiteSpace whiteSpace86,87
+semiSep1 semiSep187,88
+star star88,89
+hyph hyph89,90
+dots dots90,91
+double double91,92
+function function92,93
 operators operators95,96
-term term103,104
+operators operators96,97
 term term104,105
-expr expr106,107
+term term105,106
 expr expr107,108
-listOf listOf109,110
+expr expr108,109
 listOf listOf110,111
-numLearn numLearn115,116
+listOf listOf111,112
 numLearn numLearn116,117
-odeTup odeTup118,119
-odeTup odeTup121,122
-ode ode123,124
+numLearn numLearn117,118
+odeTup odeTup119,120
+odeTup odeTup122,123
 ode ode124,125
-parseOde parseOde134,135
+ode ode125,126
 parseOde parseOde135,136
-parseInitialValue parseInitialValue137,138
+parseOde parseOde136,137
 parseInitialValue parseInitialValue138,139
-type FillState FillState140,141
-type FillState a a140,141
-fillSSystem fillSSystem142,143
+parseInitialValue parseInitialValue139,140
+type FillState FillState141,142
+type FillState a a141,142
 fillSSystem fillSSystem143,144
-toSSystem toSSystem163,164
+fillSSystem fillSSystem144,145
 toSSystem toSSystem164,165
-parseLines parseLines172,173
+toSSystem toSSystem165,166
 parseLines parseLines173,174
-parseSystem parseSystem175,176
+parseLines parseLines174,175
 parseSystem parseSystem176,177
-allFuncs allFuncs191,192
+parseSystem parseSystem177,178
 allFuncs allFuncs192,193
-parseTester parseTester194,195
+allFuncs allFuncs193,194
 parseTester parseTester195,196
+parseTester parseTester196,197
 
 ./src/Search.hs,656
 module SearchSearch3,4
@@ -173,40 +177,40 @@ newtype MaxMaybe a = MaxMaybe MaxMaybe61,62
 newtype MaxMaybe a = MaxMaybe { getMaxMaybe getMaxMaybe61,62
 instance instance64,65
 
-./src/Solver.hs,1092
+./src/Solver.hs,1005
 module SolverSolver3,4
-class TaylorCompat TaylorCompat29,30
-class TaylorCompat TaylorCompat29,30
-  taylorDecls taylorDecls30,31
-taylorSource taylorSource32,33
-taylorSource taylorSource33,34
-setup setup37,38
-setup setup38,39
-runSolver runSolver48,49
-runSolver runSolver49,50
-instance instance59,60
-prepToAll prepToAll79,80
-prepToAll prepToAll80,81
-data Simulation Simulation85,86
-data Simulation = Simulation Simulation85,86
-data Simulation = Simulation { startTime startTime85,86
-                             , stepSize stepSize86,87
-                             , nSteps nSteps87,88
-                             , absTol absTol88,89
-                             , relTol relTol89,90
-                             , system system90,91
-simOptions simOptions103,104
-simOptions simOptions104,105
+class TaylorCompat TaylorCompat28,29
+class TaylorCompat TaylorCompat28,29
+class TaylorCompat a where taylorDecls taylorDecls28,29
+taylorSource taylorSource30,31
+taylorSource taylorSource31,32
+setup setup35,36
+setup setup36,37
+runSolver runSolver46,47
+runSolver runSolver47,48
+instance instance57,58
+prepToAll prepToAll77,78
+prepToAll prepToAll78,79
+data Simulation Simulation83,84
+  Simulation Simulation84,85
+  Simulation { startTime startTime84,85
+             , stepSize stepSize85,86
+             , nSteps nSteps86,87
+             , absTol absTol87,88
+             , relTol relTol88,89
+             , system system89,90
+simOptions simOptions101,102
+simOptions simOptions102,103
+memo memo109,110
 memo memo111,112
-memo memo112,113
-parseOut parseOut119,120
 parseOut parseOut120,121
-simMemo simMemo124,125
-simMemo simMemo127,128
-runMemo runMemo129,130
-runMemo runMemo131,132
-withParams withParams133,134
+parseOut parseOut121,122
+simMemo simMemo125,126
+simMemo simMemo128,129
+runMemo runMemo130,131
+runMemo runMemo132,133
 withParams withParams134,135
+withParams withParams135,136
 
 ./src/Square.hs,1210
 data Square Square43,44
@@ -305,33 +309,39 @@ instance instance83,84
 evalSource evalSource88,89
 evalSource evalSource89,90
 
-./test/ssystems-tests.hs,886
+./test/ssystems-tests.hs,1088
 module Main Main2,3
-toList toList14,15
-toList toList15,16
-prop_correctSize prop_correctSize17,18
-prop_correctSize prop_correctSize18,19
-prop_listIso prop_listIso20,21
-prop_listIso prop_listIso21,22
-prop_listRev prop_listRev27,28
-prop_listRev prop_listRev28,29
-prop_Indexing prop_Indexing31,32
-prop_Indexing prop_Indexing32,33
-prop_Ordering prop_Ordering35,36
-prop_Ordering prop_Ordering36,37
-prop_Serialize prop_Serialize44,45
-prop_Serialize prop_Serialize45,46
-sameResult sameResult47,48
-sameResult sameResult48,49
-sameResult2 sameResult250,51
-sameResult2 sameResult251,52
-isId isId53,54
-isId isId54,55
-checkSerialize checkSerialize56,57
-checkSerialize checkSerialize57,58
-quickCheckExit quickCheckExit59,60
-quickCheckExit quickCheckExit60,61
-failWith failWith64,65
-failWith failWith65,66
-runTests runTests68,69
-main main70,71
+toList toList17,18
+toList toList18,19
+prop_correctSize prop_correctSize20,21
+prop_correctSize prop_correctSize21,22
+prop_listIso prop_listIso23,24
+prop_listIso prop_listIso24,25
+prop_listRev prop_listRev30,31
+prop_listRev prop_listRev31,32
+prop_Indexing prop_Indexing34,35
+prop_Indexing prop_Indexing35,36
+prop_Ordering prop_Ordering38,39
+prop_Ordering prop_Ordering39,40
+prop_BinSquare prop_BinSquare47,48
+prop_BinSquare prop_BinSquare48,49
+prop_BinSSystem prop_BinSSystem50,51
+prop_BinSSystem prop_BinSSystem51,52
+prop_BinExpr prop_BinExpr53,54
+prop_BinExpr prop_BinExpr54,55
+checkParse checkParse56,57
+checkParse checkParse57,58
+sameResult sameResult62,63
+sameResult sameResult63,64
+sameResult2 sameResult265,66
+sameResult2 sameResult266,67
+isId isId68,69
+isId isId69,70
+checkSerialize checkSerialize71,72
+checkSerialize checkSerialize72,73
+quickCheckExit quickCheckExit74,75
+quickCheckExit quickCheckExit75,76
+failWith failWith79,80
+failWith failWith80,81
+runTests runTests83,84
+main main85,86
