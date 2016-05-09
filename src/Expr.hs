@@ -5,43 +5,33 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Expr
   ( Expr(..)
-  , ExprF(..)
   , Func
-  , app
-  , sin
-  , cos
-  , exp
-  , log
-  , tan
-  , atan
-  , sinh
-  , cosh
-  , tanh
-  , (^)
-  , (/)
   , eval
   , safeEval
   , fromDouble
   , anaM
+  , prettyPrint
   , cataM
   ) where
 
 import           Control.Monad         ((<=<))
 import           Data.Functor          (void)
 import           Data.Functor.Foldable hiding (Foldable, fold, unfold)
-import qualified Data.Functor.Foldable as F
+import qualified Data.Functor.Foldable as Functor
 import           Data.Serialize
-import           GHC.Generics
-import           Prelude               hiding (atan, cos, cosh, exp, log, sin,
-                                        sinh, tan, tanh, (/), (^))
-import qualified Prelude               as P
+import           GHC.Generics          (Generic)
+import           Prelude
 import           Test.QuickCheck
+import Control.Arrow
+import Control.Comonad.Cofree
+
 -- | A monadic catamorphism.
 cataM
-  :: (F.Foldable t, Traversable (Base t), Monad m)
+  :: (Functor.Foldable t, Traversable (Base t), Monad m)
   => (Base t a -> m a) -- ^ a monadic (Base t)-algebra
   -> t                 -- ^ fixed point
   -> m a               -- ^ result
@@ -55,6 +45,43 @@ anaM
   -> m t
 anaM g = a where a = fmap embed . traverse a <=< g
 
+zipo :: (Functor.Foldable g, Functor.Foldable h)
+     => (Base g (h -> c) -> Base h h -> c) -- ^ An algebra for two Foldables
+     -> g                                  -- ^ first fixed point
+     -> h                                  -- ^ second
+     -> c                                  -- ^ result
+zipo alg = cata zalg where zalg x = alg x . project
+
+zzipo :: (Functor.Foldable g, Functor.Foldable h)
+      => (Base g x -> x)                            -- ^ First helper function
+      -> (Base h y -> y)                            -- ^ second
+      -> (Base g (x, h -> c) -> Base h (y, h) -> c) -- ^ An algebra for two Foldables
+      -> g                                          -- ^ first fixed point
+      -> h                                          -- ^ second
+      -> c                                          -- ^ result
+zzipo pa pb alg = zygo pa zalg where
+  zalg x = alg x . fmap (cata pb &&& id) . project
+
+pzipo :: (Functor.Foldable g, Functor.Foldable h)
+      => (Base g (g, h -> c) -> Base h h -> c) -- ^ An algebra for two Foldables
+      -> g                                     -- ^ first fixed point
+      -> h                                     -- ^ second
+      -> c                                     -- ^ result
+pzipo alg = para zalg where zalg x = alg x . project
+
+hzipo :: (Functor.Foldable g, Functor.Foldable h)
+      => (Base g (Cofree (Base g) (h -> c)) -> Base h (Cofree (Base h) h) -> c)
+      -> g -> h -> c
+hzipo alg = histo zalg where
+  zalg x = alg x . (para . fmap . uncurry) (:<)
+
+approxEq :: Expr -> Expr -> Bool
+approxEq = hzipo alg where
+  alg (CstF a) (CstF b) = True
+  alg (SumF (SumF a b :< c) r) (SumF)
+
+
+
 -- An unfixed expression type
 data ExprF r = CstF Double
              | FncF Func r
@@ -63,25 +90,51 @@ data ExprF r = CstF Double
              | DivF r r
              | PrdF r r
              | SumF r r
-             deriving (Functor, Foldable, Traversable, Eq, Ord, Show, Generic)
+             deriving (Functor, Foldable, Traversable,
+                       Eq, Ord, Show, Generic)
 
--- An Expression type
-newtype Expr = Expr { getExpr :: Fix ExprF } deriving (Eq, Generic)
+data Expr =
+    Cst Double
+  | Func :$: Expr
+  | Neg Expr
+  | Expr :^: Expr
+  | Expr :/: Expr
+  | Expr :*: Expr
+  | Expr :+: Expr
+  deriving (Show, Eq, Ord, Generic)
 
 type instance Base Expr = ExprF
-instance F.Foldable Expr where project = fmap Expr . project . getExpr
-instance Unfoldable Expr where embed = Expr . embed . fmap getExpr
+
+instance Functor.Foldable Expr where
+  project = \case
+    Cst k   -> CstF k
+    f :$: x -> FncF f x
+    Neg x   -> NegF x
+    x :^: y -> PowF x y
+    x :/: y -> DivF x y
+    x :*: y -> PrdF x y
+    x :+: y -> SumF x y
+
+instance Unfoldable Expr where
+  embed = \case
+    CstF k   -> Cst k
+    FncF f x -> f :$: x
+    NegF x   -> Neg x
+    PowF x y -> x :^: y
+    DivF x y -> x :/: y
+    PrdF x y -> x :*: y
+    SumF x y -> x :+: y
 
 arbAlg :: Int -> Gen (ExprF Int)
 arbAlg size
-  | size <= 1 = (CstF . abs) <$> arbitrary
+  | size <= 1 = CstF <$> arbitrary
   | otherwise = oneof
-    [ (CstF . abs) <$> arbitrary
+    [ CstF <$> arbitrary
     , flip FncF r <$> arbitrary
     , pure $ NegF r
     , pure $ PowF r r
     , pure $ DivF r r
-    , pure $ PrdF r  r
+    , pure $ PrdF r r
     , pure $ SumF r r
     ] where r = size `div` 4
 
@@ -97,45 +150,28 @@ instance Serialize Expr where
       DivF x y -> putWord8 4 *> x *> y
       PrdF x y -> putWord8 5 *> x *> y
       SumF x y -> putWord8 6 *> x *> y
-  get = anaM (const (getWord8 >>= alg)) () where
+  get = alg =<< getWord8 where
     alg = \case
-      0 -> CstF <$> get
-      1 -> flip FncF () <$> get
-      2 -> pure $ NegF ()
-      3 -> pure $ PowF () ()
-      4 -> pure $ DivF () ()
-      5 -> pure $ PrdF () ()
-      6 -> pure $ SumF () ()
-      _ -> error "Corrupted binary"
+      0 -> Cst   <$> get
+      1 -> (:$:) <$> get <*> get
+      2 -> Neg   <$> get
+      3 -> (:^:) <$> get <*> get
+      4 -> (:/:) <$> get <*> get
+      5 -> (:*:) <$> get <*> get
+      6 -> (:+:) <$> get <*> get
+      _ -> error "corrupted binary"
 
 
 -- The supported functions of PLAS
-data Func = Sin
-          | Cos
-          | Exp
-          | Log
-          | Tan
-          | Atn
-          | Snh
-          | Csh
-          | Tnh
+data Func =
+    Sin | Cos | Exp | Log | Tan | Atn | Asn
+  | Acs | Snh | Csh | Tnh | Ach | Ash | Ath
           deriving (Eq, Ord, Enum, Bounded, Generic)
 
 instance Arbitrary Func where arbitrary = arbitraryBoundedEnum
 
 instance Serialize Func
 -- Applies a function to a value
-appF :: Func -> Double -> Double
-appF = \case
-  Exp -> P.exp
-  Sin -> P.sin
-  Cos -> P.cos
-  Tan -> P.tan
-  Log -> P.log
-  Atn -> P.atan
-  Snh -> P.sinh
-  Csh -> P.cosh
-  Tnh -> P.tanh
 
 instance Show Func where
   show = \case
@@ -148,30 +184,14 @@ instance Show Func where
     Snh -> "sinh"
     Csh -> "cosh"
     Tnh -> "tanh"
+    Asn -> "asin"
+    Acs -> "acos"
+    Ach -> "acosh"
+    Ash -> "asinh"
+    Ath -> "atanh"
 
-infixr 8 ^
-(^)  :: Expr -> Expr -> Expr
-Expr a ^ Expr b = (Expr . Fix) (PowF a b)
-infixl 7 /
-(/)  :: Expr -> Expr -> Expr
-Expr a / Expr b = (Expr . Fix) (DivF a b)
-app  :: Func -> Expr -> Expr
-app f (Expr x) = (Expr . Fix) (FncF f x)
 fromDouble :: Double -> Expr
-fromDouble = Expr . Fix . CstF
-
--- Shadows of prelude math functions which work on expressions
-
-sin, cos, exp, log, tan, atan, sinh, cosh, tanh :: Expr -> Expr
-sin  = app Sin
-cos  = app Cos
-exp  = app Exp
-log  = app Log
-tan  = app Tan
-atan = app Atn
-sinh = app Snh
-cosh = app Csh
-tanh = app Tnh
+fromDouble = Cst
 
 eval :: Expr -> Double
 eval = cata evalAlg
@@ -181,7 +201,7 @@ evalAlg = \case
   CstF d   -> d
   NegF a   -> negate a
   SumF a b -> a + b
-  DivF a b -> a P./ b
+  DivF a b -> a / b
   PrdF a b -> a * b
   PowF a b -> a ** b
   FncF f x -> appF f x
@@ -194,7 +214,8 @@ safeEvalAlg = \case
 safeEval :: Expr -> Either String Double
 safeEval = cataM safeEvalAlg
 
-instance Show Expr where showsPrec _ = zygo void (pprAlg ((<) . void))
+prettyPrint :: Expr -> ShowS
+prettyPrint = zygo void (pprAlg ((<) . void))
 
 pprAlg :: (ExprF (t, ShowS) -> t -> Bool) -> ExprF (t, ShowS) -> ShowS
 pprAlg cmp e = case e of
@@ -208,10 +229,45 @@ pprAlg cmp e = case e of
   where par (c,p) = showParen (cmp e c) p
 
 instance Num Expr where
-  fromInteger     = ana CstF . fromInteger
-  Expr a + Expr b = (Expr . Fix) (SumF a b)
-  Expr a * Expr b = (Expr . Fix) (PrdF a b)
-  abs e           = if eval e < 0 then negate e else e
-  signum          = ana CstF . signum . eval
-  negate          = Expr . Fix . NegF . getExpr
+  fromInteger = Cst . fromInteger
+  x + y = x :+: y
+  x * y = x :*: y
+  abs e = if eval e < 0 then negate e else e
+  signum = Cst . signum . eval
+  negate = Neg
 
+instance Fractional Expr where
+  fromRational = Cst . fromRational
+  (/) = (:/:)
+
+instance Floating Expr where
+  pi = Cst pi
+  exp = (:$:) Exp
+  log = (:$:) Log
+  sin = (:$:) Sin
+  cos = (:$:) Cos
+  asin = (:$:) Asn
+  acos = (:$:) Acs
+  atan = (:$:) Atn
+  sinh = (:$:) Snh
+  cosh = (:$:) Csh
+  asinh = (:$:) Ash
+  acosh = (:$:) Ach
+  atanh = (:$:) Ath
+
+appF :: Func -> Double -> Double
+appF = \case
+  Exp -> exp
+  Sin -> sin
+  Cos -> cos
+  Tan -> tan
+  Log -> log
+  Atn -> atan
+  Snh -> sinh
+  Csh -> cosh
+  Tnh -> tanh
+  Asn -> asin
+  Acs -> acos
+  Ach -> acosh
+  Ash -> asinh
+  Ath -> atanh

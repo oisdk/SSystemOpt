@@ -262,5 +262,5 @@ instance Serialize a => Serialize (Square a) where
 
 -- fromList
 
-fromList :: Int -> [a] -> Maybe (Square a)
+fromList :: Foldable f => Int -> f a -> Maybe (Square a)
 fromList n = evalSource (create n pop)

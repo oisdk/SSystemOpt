@@ -21,25 +21,25 @@ import           Data.List
 import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as Map
 import           Data.Maybe
+import           Data.Ord
 import           Data.Text           (Text, pack)
 import           Expr
-import           Prelude             hiding (unlines, (/), (^))
+import           Prelude             hiding (unlines)
 import           Square
 import           SSystem
 import           Text.Parsec         hiding (State, many, optional, uncons,
                                       (<|>))
 import           Text.Parsec.Expr
+import           Text.Parsec.Text
 import qualified Text.Parsec.Token   as Token
 import           Utils
-import Data.Ord
+
 data ODE =
   ODE { _posFac :: Maybe NumLearn
       , _posExp :: Map String NumLearn
       , _negFac :: Maybe NumLearn
       , _negExp :: Map String NumLearn
       } deriving Show
-
-makeLenses ''ODE
 
 data ParseState =
   ParseState { _odes     :: Map String ODE
@@ -51,11 +51,8 @@ makeLenses ''ParseState
 beginState :: ParseState
 beginState = ParseState Map.empty Map.empty
 
-
-type Parser = ParsecT Text () Identity
-
 -- | Language Definition
-languageDef :: Token.GenLanguageDef Text st Identity
+languageDef :: Token.GenLanguageDef Text () Identity
 languageDef =
   Token.LanguageDef
     { Token.commentStart   = ""
@@ -89,18 +86,19 @@ semiSep1 = Token.semiSep1 lexer
 star = reservedOp "*"; carat = reservedOp "^"
 hyph = reservedOp "-"; eqsn = reservedOp "="
 dots = reservedOp ".."
-double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
-function f = Prefix $ (try . reservedOp . show) f $> app f
+double = (hyph *> (negate <$> num)) <|> num where
+  num = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
+function f = Prefix $ (try . reservedOp . show) f $> (:$:) f
 
 -- Operator Table
 operators :: OperatorTable Text () Identity Expr
 operators =  [ map function (sortOn (Down . length . show) allFuncs)
              , [Prefix (reservedOp "-" $> negate)]
-             , [Infix  (reservedOp "^" $> (^)) AssocRight]
-             , [Infix  (reservedOp "/" $> (/)) AssocRight]
-             , [Infix  (reservedOp "*" $> (*)) AssocLeft ]
-             , [Infix  (reservedOp "-" $> (-)) AssocLeft ]
-             , [Infix  (reservedOp "+" $> (+)) AssocLeft ] ]
+             , [Infix  (reservedOp "^" $> (**)) AssocRight]
+             , [Infix  (reservedOp "/" $> (/) ) AssocRight]
+             , [Infix  (reservedOp "*" $> (*) ) AssocLeft ]
+             , [Infix  (reservedOp "-" $> (-) ) AssocLeft ]
+             , [Infix  (reservedOp "+" $> (+) ) AssocLeft ] ]
 
 term :: Parser Expr
 term = Token.parens lexer expr <|> fmap fromDouble double
@@ -109,10 +107,11 @@ expr :: Parser Expr
 expr = buildExpressionParser operators term
 
 listOf :: Enum a => Parser a -> Parser [a]
-listOf parser = Token.brackets lexer (unenum =<< Token.commaSep lexer parser) where
-  unenum [x] = dots *> fmap (enumFromTo x) parser <|> pure [x]
-  unenum [x,y] = dots *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
-  unenum xs = pure xs
+listOf parser =
+  Token.brackets lexer (unenum =<< Token.commaSep lexer parser) where
+    unenum [x] = dots *> fmap (enumFromTo x) parser <|> pure [x]
+    unenum [x,y] = dots *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
+    unenum xs = pure xs
 
 numLearn :: Parser NumLearn
 numLearn = eitherA double (listOf double)
@@ -194,4 +193,5 @@ allFuncs :: [Func]
 allFuncs = [minBound..maxBound]
 
 parseTester :: Parser a -> String -> Either String a
-parseTester p = over _Left show . parse (whiteSpace *> p <* eof) "testing" . pack
+parseTester p =
+  over _Left show . parse (whiteSpace *> p <* eof) "testing" . pack
