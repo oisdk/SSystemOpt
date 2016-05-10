@@ -18,6 +18,9 @@ import qualified Test.QuickCheck.Property as P
 toList :: Foldable f => f a -> [a]
 toList = foldr (:) []
 
+prop_ParseExpr :: Expr -> P.Result
+prop_ParseExpr = checkParse expr (`roundShow` "") (`prettyPrint` "") approxEqual
+
 prop_correctSize :: Square Integer -> Bool
 prop_correctSize s = n * n == length s where n = _squareSize s
 
@@ -54,11 +57,12 @@ prop_BinSSystem = checkSerialize
 prop_BinExpr :: Expr -> P.Result
 prop_BinExpr = checkSerialize
 
+
 checkParse :: Parser a -> (a -> String) -> (a -> String) -> (a -> a -> Bool) -> a -> P.Result
-checkParse p d s e x = either failWith eq (parseTester p (s x)) where
+checkParse p d s e x = either fw eq (parseTester p (s x)) where
   eq y | e x y = P.succeeded
-       | otherwise = failWith . concat $
-         ["Got: ", d y, "\n", "Expected: ", d x]
+       | otherwise = fw (concat ["Got     : ", d y, "\n", "Expected: ", d x])
+  fw m = failWith $ m ++ "\nWith    : " ++ s x
 
 sameResult :: Eq a => (b -> a) -> (b -> a) -> b -> Bool
 sameResult = liftA2 (==)

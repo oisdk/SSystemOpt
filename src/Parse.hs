@@ -86,9 +86,8 @@ semiSep1 = Token.semiSep1 lexer
 star = reservedOp "*"; carat = reservedOp "^"
 hyph = reservedOp "-"; eqsn = reservedOp "="
 dots = reservedOp ".."
-double = (hyph *> (negate <$> num)) <|> num where
-  num = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
-function f = Prefix $ (try . reservedOp . show) f $> (:$:) f
+double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
+function f = Prefix $ (try . reservedOp . show) f $> fnc f
 
 -- Operator Table
 operators :: OperatorTable Text () Identity Expr
