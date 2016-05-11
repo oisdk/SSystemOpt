@@ -30,9 +30,10 @@ import           SSystem
 import           Text.Parsec         hiding (State, many, optional, uncons,
                                       (<|>))
 import           Text.Parsec.Expr
-import           Text.Parsec.Text
 import qualified Text.Parsec.Token   as Token
 import           Utils
+
+type Parser a = Parsec Text () a
 
 data ODE =
   ODE { _posFac :: Maybe NumLearn
@@ -87,20 +88,20 @@ star = reservedOp "*"; carat = reservedOp "^"
 hyph = reservedOp "-"; eqsn = reservedOp "="
 dots = reservedOp ".."
 double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
-function f = Prefix $ (try . reservedOp . show) f $> fnc f
+function f = Prefix $ (try . reservedOp . show) f $> (:$:) f
 
 -- Operator Table
 operators :: OperatorTable Text () Identity Expr
 operators =  [ map function (sortOn (Down . length . show) allFuncs)
              , [Prefix (reservedOp "-" $> negate)]
              , [Infix  (reservedOp "^" $> (**)) AssocRight]
-             , [Infix  (reservedOp "/" $> (/) ) AssocRight]
+             , [Infix  (reservedOp "/" $> (/) ) AssocLeft ]
              , [Infix  (reservedOp "*" $> (*) ) AssocLeft ]
              , [Infix  (reservedOp "-" $> (-) ) AssocLeft ]
              , [Infix  (reservedOp "+" $> (+) ) AssocLeft ] ]
 
 term :: Parser Expr
-term = Token.parens lexer expr <|> fmap fromDouble double
+term = Token.parens lexer expr <|> fmap Cst double
 
 expr :: Parser Expr
 expr = buildExpressionParser operators term

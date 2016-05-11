@@ -14,12 +14,13 @@ import           SSystem
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
+import Control.Lens (ix, (^..))
 
 toList :: Foldable f => f a -> [a]
 toList = foldr (:) []
 
 prop_ParseExpr :: Expr -> P.Result
-prop_ParseExpr = checkParse expr (`roundShow` "") (`prettyPrint` "") approxEqual
+prop_ParseExpr = checkParse expr roundShow prettyPrint approxEqual
 
 prop_correctSize :: Square Integer -> Bool
 prop_correctSize s = n * n == length s where n = _squareSize s
@@ -36,11 +37,14 @@ prop_listRev s = sameResult Just (fromList n . toList) s where
   n = _squareSize s
 
 prop_Indexing :: Square Integer -> Bool
-prop_Indexing s = map (unsafeIndex s) ((,) <$> idxs <*> idxs) == toList s where
+prop_Indexing s =
+  [ e | i <- idxs, j <- idxs, e <- s ^.. ix (i,j)] == toList s where
   idxs = [0..(_squareSize s - 1)]
 
 prop_Ordering :: Square Integer -> Square Integer -> Property
-prop_Ordering s t = classify (c==EQ) "Same size squares" . classify (c/=EQ) "Different sized squares" $
+prop_Ordering s t =
+  classify (c==EQ) "Same size squares" .
+  classify (c/=EQ) "Different sized squares" $
   case c of
     EQ -> r == comparing toList s t
     _  -> r == c

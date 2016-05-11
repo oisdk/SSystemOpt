@@ -10,16 +10,12 @@
 
 module Expr
   ( Expr
+  , ExprN((:$:), Cst)
   , Func
-  , fnc
   , eval
   , safeEval
-  , fromDouble
-  , anaM
   , prettyPrint
-  , cataM
   , approxEqual
-  , showFunc
   , roundShow
   ) where
 
@@ -27,7 +23,6 @@ import           Control.Applicative   (liftA2)
 import           Control.Lens
 import           Control.Monad         ((<=<))
 import           Data.Function
-import           Data.Functor          (void)
 import           Data.Functor.Foldable hiding (Foldable, fold, unfold)
 import qualified Data.Functor.Foldable as Functor
 import           Data.Ratio
@@ -36,11 +31,28 @@ import           GHC.Generics          (Generic)
 import           Prelude
 import           Test.QuickCheck
 
+instance Show Func where
+  show = \case
+    Exp -> "exp"
+    Sin -> "sin"
+    Cos -> "cos"
+    Tan -> "tan"
+    Log -> "log"
+    Atn -> "atan"
+    Snh -> "sinh"
+    Csh -> "cosh"
+    Tnh -> "tanh"
+    Asn -> "asin"
+    Acs -> "acos"
+    Ach -> "acosh"
+    Ash -> "asinh"
+    Ath -> "atanh"
+
 -- The supported functions of PLAS
 data Func =
     Sin | Cos | Exp | Log | Tan | Atn | Asn
   | Acs | Snh | Csh | Tnh | Ach | Ash | Ath
-          deriving (Eq, Ord, Enum, Bounded, Generic, Show)
+          deriving (Eq, Ord, Enum, Bounded, Generic)
 
 -- An unfixed expression type
 data ExprF a r = CstF a
@@ -80,10 +92,22 @@ zipo alg = cata zalg where zalg x = alg x . project
 
 type Expr = ExprN Double
 
-roundShow :: Expr -> ShowS
-roundShow = zygo void (either pprAlg (shows . f) . matching _CstF) where
+roundShow :: Expr -> String
+roundShow e = zygo prec (either pprAlg' (shows . f) . matching _CstF) e "" where
   f :: Double -> Integer
   f = floor
+  pprAlg' = pprAlg
+  pprAlg' :: ExprF Double (Int, ShowS) -> ShowS
+
+prec :: ExprF a b -> Int
+prec = \case
+  CstF _   -> 7
+  FncF _ _ -> 6
+  NegF _   -> 5
+  PowF _ _ -> 4
+  DivF _ _ -> 3
+  PrdF _ _ -> 2
+  SumF _ _ -> 1
 
 assoc :: Expr -> Expr
 assoc = rewrite reassoc where
@@ -91,8 +115,13 @@ assoc = rewrite reassoc where
   reassoc (a :*: (b :*: c)) = Just $ (a :*: b) :*: c
   reassoc _ = Nothing
 
+normalize :: Expr -> Expr
+normalize = transform unneg where
+  unneg (Cst x) | x < 0 = Neg (Cst (abs x))
+  unneg e = e
+
 approxEqual :: Expr -> Expr -> Bool
-approxEqual = zipo alg `on` assoc where
+approxEqual = zipo alg `on` (normalize.assoc) where
   alg = zipAlg n (==) (&&) False
   n a b = abs (a-b) < 0.01
 
@@ -152,9 +181,9 @@ instance Plated (ExprN a) where
 
 arbAlg :: (Num a, Arbitrary a) => Int -> Gen (ExprF a Int)
 arbAlg size
-  | size <= 1 = CstF . abs <$> arbitrary
+  | size <= 1 = CstF <$> arbitrary
   | otherwise = oneof
-    [ CstF . abs <$> arbitrary
+    [ CstF <$> arbitrary
     , flip FncF r <$> arbitrary
     , pure $ NegF r
     , pure $ PowF r r
@@ -193,23 +222,6 @@ instance Arbitrary Func where arbitrary = arbitraryBoundedEnum
 instance Serialize Func
 -- Applies a function to a value
 
-showFunc :: Func -> String
-showFunc = \case
-  Exp -> "exp"
-  Sin -> "sin"
-  Cos -> "cos"
-  Tan -> "tan"
-  Log -> "log"
-  Atn -> "atan"
-  Snh -> "sinh"
-  Csh -> "cosh"
-  Tnh -> "tanh"
-  Asn -> "asin"
-  Acs -> "acos"
-  Ach -> "acosh"
-  Ash -> "asinh"
-  Ath -> "atanh"
-
 fromDouble :: Double -> Expr
 fromDouble = Cst
 
@@ -234,21 +246,21 @@ safeEvalAlg = \case
 safeEval :: Expr -> Either String Double
 safeEval = cataM safeEvalAlg
 
-prettyPrint :: Expr -> ShowS
-prettyPrint = zygo void pprAlg
+prettyPrint :: Expr -> String
+prettyPrint e = (zygo prec pprAlg . normalize) e ""
 
-pprAlg :: (Show a, Ord a) => ExprF a (ExprF a (), ShowS) -> ShowS
+pprAlg :: Show a => ExprF a (Int, ShowS) -> ShowS
 pprAlg e = case e of
   CstF i   -> shows i
-  NegF a   -> showString "- " . parR a
+  NegF a   -> showString "-" . parR a
   SumF a b -> parL a . showString " + " . parL b
-  DivF a b -> parR a . showString " / " . parR b
+  DivF a b -> parL a . showString " / " . parR b
   PrdF a b -> parL a . showString " * " . parL b
-  PowF a b -> parR a . showString " ^ " . parR b
+  PowF a b -> parR a . showString " ^ " . parL b
   FncF f (_,x) -> shows f . showChar '(' . x . showChar ')'
   where
-    parL (c,p) = showParen (void e <  c) p
-    parR (c,p) = showParen (void e <= c) p
+    parL (c,p) = showParen (prec e >  c) p
+    parR (c,p) = showParen (prec e >= c) p
 
 instance Floating a => Num (ExprN a) where
   fromInteger = Cst . fromInteger
@@ -259,24 +271,28 @@ instance Floating a => Num (ExprN a) where
   negate = Neg
 
 instance Floating a => Fractional (ExprN a) where
-  fromRational = liftA2 (:/:) (fromInteger.numerator) (fromInteger.denominator)
+  fromRational =
+    liftA2
+      (:/:)
+      (fromInteger.numerator)
+      (fromInteger.denominator)
   (/) = (:/:)
 
 instance Floating a => Floating (ExprN a) where
-  pi = Cst pi
-  exp = (:$:) Exp
-  log = (:$:) Log
-  sin = (:$:) Sin
-  cos = (:$:) Cos
-  asin = (:$:) Asn
-  acos = (:$:) Acs
-  atan = (:$:) Atn
-  sinh = (:$:) Snh
-  cosh = (:$:) Csh
+  pi    = Cst pi
+  exp   = (:$:) Exp
+  log   = (:$:) Log
+  sin   = (:$:) Sin
+  cos   = (:$:) Cos
+  asin  = (:$:) Asn
+  acos  = (:$:) Acs
+  atan  = (:$:) Atn
+  sinh  = (:$:) Snh
+  cosh  = (:$:) Csh
   asinh = (:$:) Ash
   acosh = (:$:) Ach
   atanh = (:$:) Ath
-  (**) = (:^:)
+  (**)  = (:^:)
 
 appF :: Floating a => Func -> a -> a
 appF = \case
@@ -294,3 +310,7 @@ appF = \case
   Ach -> acosh
   Ash -> asinh
   Ath -> atanh
+
+
+
+

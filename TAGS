@@ -8,150 +8,153 @@ simData simData20,21
 main main22,23
 main main23,24
 
-./src/Expr.hs,1948
-import import27,28
-data Func Func39,40
-    Sin Sin40,41
-    Sin | Cos Cos40,41
-    Sin | Cos | Exp Exp40,41
-    Sin | Cos | Exp | Log Log40,41
-    Sin | Cos | Exp | Log | Tan Tan40,41
-    Sin | Cos | Exp | Log | Tan | Atn Atn40,41
-    Sin | Cos | Exp | Log | Tan | Atn | AsnAsn40,41
-  | Acs Acs41,42
-  | Acs | Snh Snh41,42
-  | Acs | Snh | Csh Csh41,42
-  | Acs | Snh | Csh | Tnh Tnh41,42
-  | Acs | Snh | Csh | Tnh | Ach Ach41,42
-  | Acs | Snh | Csh | Tnh | Ach | Ash Ash41,42
-  | Acs | Snh | Csh | Tnh | Ach | Ash | AthAth41,42
-data ExprF ExprF45,46
-data ExprF a r = CstF CstF45,46
-               | FncF FncF46,47
-               | NegF NegF47,48
-               | PowF PowF48,49
-               | DivF DivF49,50
-               | PrdF PrdF50,51
-               | SumF SumF51,52
-cataM cataM63,64
-anaM anaM71,72
-zipo zipo73,74
-zipo zipo78,79
-type Expr Expr80,81
-roundShow roundShow82,83
-roundShow roundShow83,84
-assoc assoc87,88
-assoc assoc88,89
-approxEqual approxEqual93,94
-approxEqual approxEqual94,95
-zipAlg zipAlg98,99
-zipAlg zipAlg104,105
-data ExprN ExprN114,115
-    Cst Cst115,116
-  | Func Func116,117
-  | Neg Neg117,118
-  | ExprN ExprN118,119
-  | ExprN ExprN119,120
-  | ExprN ExprN120,121
-  | ExprN ExprN121,122
-fnc fnc124,125
-fnc fnc125,126
-type instance instance127,128
-type instance Base Base127,128
-instance instance129,130
-arbAlg arbAlg152,153
-arbAlg arbAlg153,154
-showFunc showFunc195,196
-showFunc showFunc196,197
-fromDouble fromDouble212,213
-fromDouble fromDouble213,214
-eval eval215,216
-eval eval216,217
-evalAlg evalAlg218,219
-evalAlg evalAlg219,220
-safeEvalAlg safeEvalAlg228,229
-safeEvalAlg safeEvalAlg229,230
-safeEval safeEval233,234
-safeEval safeEval234,235
-prettyPrint prettyPrint236,237
-prettyPrint prettyPrint237,238
-pprAlg pprAlg239,240
-pprAlg pprAlg240,241
-appF appF280,281
-appF appF281,282
+./src/Expr.hs,1998
+import import23,24
+instance instance33,34
+data Func Func51,52
+    Sin Sin52,53
+    Sin | Cos Cos52,53
+    Sin | Cos | Exp Exp52,53
+    Sin | Cos | Exp | Log Log52,53
+    Sin | Cos | Exp | Log | Tan Tan52,53
+    Sin | Cos | Exp | Log | Tan | Atn Atn52,53
+    Sin | Cos | Exp | Log | Tan | Atn | AsnAsn52,53
+  | Acs Acs53,54
+  | Acs | Snh Snh53,54
+  | Acs | Snh | Csh Csh53,54
+  | Acs | Snh | Csh | Tnh Tnh53,54
+  | Acs | Snh | Csh | Tnh | Ach Ach53,54
+  | Acs | Snh | Csh | Tnh | Ach | Ash Ash53,54
+  | Acs | Snh | Csh | Tnh | Ach | Ash | AthAth53,54
+data ExprF ExprF57,58
+data ExprF a r = CstF CstF57,58
+               | FncF FncF58,59
+               | NegF NegF59,60
+               | PowF PowF60,61
+               | DivF DivF61,62
+               | PrdF PrdF62,63
+               | SumF SumF63,64
+cataM cataM75,76
+anaM anaM83,84
+zipo zipo85,86
+zipo zipo90,91
+type Expr Expr92,93
+roundShow roundShow94,95
+roundShow roundShow95,96
+prec prec101,102
+prec prec102,103
+assoc assoc111,112
+assoc assoc112,113
+normalize normalize117,118
+normalize normalize118,119
+approxEqual approxEqual122,123
+approxEqual approxEqual123,124
+zipAlg zipAlg127,128
+zipAlg zipAlg133,134
+data ExprN ExprN143,144
+    Cst Cst144,145
+  | Func Func145,146
+  | Neg Neg146,147
+  | ExprN ExprN147,148
+  | ExprN ExprN148,149
+  | ExprN ExprN149,150
+  | ExprN ExprN150,151
+fnc fnc153,154
+fnc fnc154,155
+type instance instance156,157
+type instance Base Base156,157
+arbAlg arbAlg181,182
+arbAlg arbAlg182,183
+fromDouble fromDouble224,225
+fromDouble fromDouble225,226
+eval eval227,228
+eval eval228,229
+evalAlg evalAlg230,231
+evalAlg evalAlg231,232
+safeEvalAlg safeEvalAlg240,241
+safeEvalAlg safeEvalAlg241,242
+safeEval safeEval245,246
+safeEval safeEval246,247
+prettyPrint prettyPrint248,249
+prettyPrint prettyPrint249,250
+pprAlg pprAlg251,252
+pprAlg pprAlg252,253
+appF appF296,297
+appF appF297,298
 
-./src/Parse.hs,2010
+./src/Parse.hs,2031
 module ParseParse5,6
-data ODE ODE36,37
-  ODE ODE37,38
-  ODE { _posFac _posFac37,38
-      , _posExp _posExp38,39
-      , _negFac _negFac39,40
-      , _negExp _negExp40,41
-data ParseState ParseState43,44
-  ParseState ParseState44,45
-  ParseState { _odes _odes44,45
-             , _initials _initials45,46
-beginState beginState50,51
+type Parser Parser35,36
+type Parser a a35,36
+data ODE ODE37,38
+  ODE ODE38,39
+  ODE { _posFac _posFac38,39
+      , _posExp _posExp39,40
+      , _negFac _negFac40,41
+      , _negExp _negExp41,42
+data ParseState ParseState44,45
+  ParseState ParseState45,46
+  ParseState { _odes _odes45,46
+             , _initials _initials46,47
 beginState beginState51,52
-languageDef languageDef54,55
+beginState beginState52,53
 languageDef languageDef55,56
-lexer lexer72,73
-reservedOp, reserved reserved73,74
-reservedOp,reservedOp73,74
-semiSep1 semiSep174,75
-function function75,76
-identifier identifier76,77
-whiteSpace, star, carat, hyph, eqsn, dots dots77,78
-whiteSpace, star, carat, hyph, eqsn,eqsn77,78
-whiteSpace, star, carat, hyph,hyph77,78
-whiteSpace, star, carat,carat77,78
-whiteSpace, star,star77,78
-whiteSpace,whiteSpace77,78
-double double78,79
-lexer lexer79,80
-reservedOp reservedOp80,81
-identifier identifier81,82
-reserved reserved82,83
-whiteSpace whiteSpace83,84
-semiSep1 semiSep184,85
-star star85,86
-hyph hyph86,87
-dots dots87,88
-double double88,89
-function function89,90
-operators operators92,93
+languageDef languageDef56,57
+lexer lexer73,74
+reservedOp, reserved reserved74,75
+reservedOp,reservedOp74,75
+semiSep1 semiSep175,76
+function function76,77
+identifier identifier77,78
+whiteSpace, star, carat, hyph, eqsn, dots dots78,79
+whiteSpace, star, carat, hyph, eqsn,eqsn78,79
+whiteSpace, star, carat, hyph,hyph78,79
+whiteSpace, star, carat,carat78,79
+whiteSpace, star,star78,79
+whiteSpace,whiteSpace78,79
+double double79,80
+lexer lexer80,81
+reservedOp reservedOp81,82
+identifier identifier82,83
+reserved reserved83,84
+whiteSpace whiteSpace84,85
+semiSep1 semiSep185,86
+star star86,87
+hyph hyph87,88
+dots dots88,89
+double double89,90
+function function90,91
 operators operators93,94
-term term101,102
+operators operators94,95
 term term102,103
-expr expr104,105
+term term103,104
 expr expr105,106
-listOf listOf107,108
+expr expr106,107
 listOf listOf108,109
-numLearn numLearn114,115
+listOf listOf109,110
 numLearn numLearn115,116
-odeTup odeTup117,118
-odeTup odeTup120,121
-ode ode122,123
+numLearn numLearn116,117
+odeTup odeTup118,119
+odeTup odeTup121,122
 ode ode123,124
-parseOde parseOde133,134
+ode ode124,125
 parseOde parseOde134,135
-parseInitialValue parseInitialValue136,137
+parseOde parseOde135,136
 parseInitialValue parseInitialValue137,138
-type FillState FillState139,140
-type FillState a a139,140
-fillSSystem fillSSystem141,142
+parseInitialValue parseInitialValue138,139
+type FillState FillState140,141
 fillSSystem fillSSystem142,143
-toSSystem toSSystem162,163
+fillSSystem fillSSystem143,144
 toSSystem toSSystem163,164
-parseLines parseLines171,172
+toSSystem toSSystem164,165
 parseLines parseLines172,173
-parseSystem parseSystem174,175
+parseLines parseLines173,174
 parseSystem parseSystem175,176
-allFuncs allFuncs190,191
+parseSystem parseSystem176,177
 allFuncs allFuncs191,192
-parseTester parseTester193,194
+allFuncs allFuncs192,193
 parseTester parseTester194,195
+parseTester parseTester195,196
 
 ./src/Search.hs,656
 module SearchSearch3,4
@@ -314,39 +317,39 @@ evalSource evalSource89,90
 
 ./test/ssystems-tests.hs,1162
 module Main Main2,3
-toList toList17,18
 toList toList18,19
-prop_ParseExpr prop_ParseExpr20,21
+toList toList19,20
 prop_ParseExpr prop_ParseExpr21,22
-prop_correctSize prop_correctSize23,24
+prop_ParseExpr prop_ParseExpr22,23
 prop_correctSize prop_correctSize24,25
-prop_listIso prop_listIso26,27
+prop_correctSize prop_correctSize25,26
 prop_listIso prop_listIso27,28
-prop_listRev prop_listRev33,34
+prop_listIso prop_listIso28,29
 prop_listRev prop_listRev34,35
-prop_Indexing prop_Indexing37,38
+prop_listRev prop_listRev35,36
 prop_Indexing prop_Indexing38,39
-prop_Ordering prop_Ordering41,42
-prop_Ordering prop_Ordering42,43
-prop_BinSquare prop_BinSquare50,51
-prop_BinSquare prop_BinSquare51,52
-prop_BinSSystem prop_BinSSystem53,54
-prop_BinSSystem prop_BinSSystem54,55
-prop_BinExpr prop_BinExpr56,57
-prop_BinExpr prop_BinExpr57,58
-checkParse checkParse60,61
-checkParse checkParse61,62
-sameResult sameResult66,67
-sameResult sameResult67,68
-sameResult2 sameResult269,70
-sameResult2 sameResult270,71
-isId isId72,73
-isId isId73,74
-checkSerialize checkSerialize75,76
-checkSerialize checkSerialize76,77
-quickCheckExit quickCheckExit78,79
-quickCheckExit quickCheckExit79,80
-failWith failWith83,84
-failWith failWith84,85
-runTests runTests87,88
-main main89,90
+prop_Indexing prop_Indexing39,40
+prop_Ordering prop_Ordering43,44
+prop_Ordering prop_Ordering44,45
+prop_BinSquare prop_BinSquare54,55
+prop_BinSquare prop_BinSquare55,56
+prop_BinSSystem prop_BinSSystem57,58
+prop_BinSSystem prop_BinSSystem58,59
+prop_BinExpr prop_BinExpr60,61
+prop_BinExpr prop_BinExpr61,62
+checkParse checkParse64,65
+checkParse checkParse65,66
+sameResult sameResult70,71
+sameResult sameResult71,72
+sameResult2 sameResult273,74
+sameResult2 sameResult274,75
+isId isId76,77
+isId isId77,78
+checkSerialize checkSerialize79,80
+checkSerialize checkSerialize80,81
+quickCheckExit quickCheckExit82,83
+quickCheckExit quickCheckExit83,84
+failWith failWith87,88
+failWith failWith88,89
+runTests runTests91,92
+main main93,94
