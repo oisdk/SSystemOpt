@@ -25,7 +25,7 @@ import           Data.Ord
 import           Data.Text           (Text, pack)
 import           Expr
 import           Prelude             hiding (unlines)
-import           Square
+import           Data.Square
 import           SSystem
 import           Text.Parsec         hiding (State, many, optional, uncons,
                                       (<|>))

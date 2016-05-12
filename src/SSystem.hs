@@ -9,7 +9,7 @@ module SSystem where
 import           Control.Lens
 import           Data.Serialize
 import           GHC.Generics
-import           Square
+import           Data.Square
 import           Test.QuickCheck
 import           Utils
 

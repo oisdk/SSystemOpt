@@ -9,58 +9,19 @@ import           Data.Ord
 import           Data.Serialize           (Serialize, decode, encode)
 import           Expr
 import           Parse
-import           Square
 import           SSystem
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
-import Control.Lens (ix, (^..))
-
-toList :: Foldable f => f a -> [a]
-toList = foldr (:) []
 
 prop_ParseExpr :: Expr -> P.Result
 prop_ParseExpr = checkParse expr roundShow prettyPrint approxEqual
-
-prop_correctSize :: Square Integer -> Bool
-prop_correctSize s = n * n == length s where n = _squareSize s
-
-prop_listIso :: NonEmptyList Integer -> Bool
-prop_listIso (NonEmpty xs) = sameResult (Just . take m) (fmap toList . fromList n) xs where
-  n = (floor . sqrt' . fromIntegral . length) xs
-  m = n * n
-  sqrt' :: Double -> Double
-  sqrt' = sqrt
-
-prop_listRev :: Square Integer -> Bool
-prop_listRev s = sameResult Just (fromList n . toList) s where
-  n = _squareSize s
-
-prop_Indexing :: Square Integer -> Bool
-prop_Indexing s =
-  [ e | i <- idxs, j <- idxs, e <- s ^.. ix (i,j)] == toList s where
-  idxs = [0..(_squareSize s - 1)]
-
-prop_Ordering :: Square Integer -> Square Integer -> Property
-prop_Ordering s t =
-  classify (c==EQ) "Same size squares" .
-  classify (c/=EQ) "Different sized squares" $
-  case c of
-    EQ -> r == comparing toList s t
-    _  -> r == c
-    where
-      c = comparing _squareSize s t
-      r = compare s t
-
-prop_BinSquare :: Square Int -> P.Result
-prop_BinSquare = checkSerialize
 
 prop_BinSSystem :: SSystem Int -> P.Result
 prop_BinSSystem = checkSerialize
 
 prop_BinExpr :: Expr -> P.Result
 prop_BinExpr = checkSerialize
-
 
 checkParse :: Parser a -> (a -> String) -> (a -> String) -> (a -> a -> Bool) -> a -> P.Result
 checkParse p d s e x = either fw eq (parseTester p (s x)) where

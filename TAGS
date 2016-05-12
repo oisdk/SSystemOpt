@@ -218,53 +218,6 @@ runMemo runMemo132,133
 withParams withParams134,135
 withParams withParams135,136
 
-./src/Square.hs,1210
-data Square Square43,44
-  Square Square44,45
-  Square { _squareSize _squareSize44,45
-         , _square _square45,46
-squareSize squareSize48,49
-squareSize squareSize49,50
-data Square_ Square_51,52
-    Zero Zero52,53
-  | Even Even53,54
-  | Odd Odd54,55
-newtype None None65,66
-newtype None a = None None65,66
-data Pair Pair68,69
-data Pair v w a = Pair Pair68,69
-mkP mkP89,90
-mkP mkP90,91
-create create92,93
-create create93,94
-create_ create_96,97
-create_ create_105,106
-leE leE118,119
-leE leE119,120
-leI leI123,124
-leI leI124,125
-leP leP127,128
-leP leP130,131
-type FlippedLens' FlippedLens'135,136
-type FlippedLens' s s135,136
-ix_ ix_137,138
-ix_ ix_138,139
-instance instance144,145
-type instance instance150,151
-type instance Index Index150,151
-type instance instance151,152
-type instance IxValue IxValue151,152
-unsafeIndex unsafeIndex153,154
-unsafeIndex unsafeIndex154,155
-class Eq1 f => EqR1 EqR1188,189
-  eqR1 :: (Eq a, EqR1 g) => f f189,190
-  eqR1 eqR1189,190
-class (Ord1 f, EqR1 f) => OrdR1 OrdR1200,201
-  cmpR1 :: (Ord a, OrdR1 g) => f f201,202
-  cmpR1 cmpR1201,202
-fromList fromList264,265
-fromList fromList265,266
-
 ./src/SSystem.hs,345
 data STerm STerm15,16
   STerm STerm16,17
@@ -315,41 +268,27 @@ instance instance83,84
 evalSource evalSource88,89
 evalSource evalSource89,90
 
-./test/ssystems-tests.hs,1162
+./test/ssystems-tests.hs,692
 module Main Main2,3
-toList toList18,19
-toList toList19,20
-prop_ParseExpr prop_ParseExpr21,22
-prop_ParseExpr prop_ParseExpr22,23
-prop_correctSize prop_correctSize24,25
-prop_correctSize prop_correctSize25,26
-prop_listIso prop_listIso27,28
-prop_listIso prop_listIso28,29
-prop_listRev prop_listRev34,35
-prop_listRev prop_listRev35,36
-prop_Indexing prop_Indexing38,39
-prop_Indexing prop_Indexing39,40
-prop_Ordering prop_Ordering43,44
-prop_Ordering prop_Ordering44,45
-prop_BinSquare prop_BinSquare54,55
-prop_BinSquare prop_BinSquare55,56
-prop_BinSSystem prop_BinSSystem57,58
-prop_BinSSystem prop_BinSSystem58,59
-prop_BinExpr prop_BinExpr60,61
-prop_BinExpr prop_BinExpr61,62
-checkParse checkParse64,65
-checkParse checkParse65,66
-sameResult sameResult70,71
-sameResult sameResult71,72
-sameResult2 sameResult273,74
-sameResult2 sameResult274,75
-isId isId76,77
-isId isId77,78
-checkSerialize checkSerialize79,80
-checkSerialize checkSerialize80,81
-quickCheckExit quickCheckExit82,83
-quickCheckExit quickCheckExit83,84
-failWith failWith87,88
-failWith failWith88,89
-runTests runTests91,92
-main main93,94
+prop_ParseExpr prop_ParseExpr16,17
+prop_ParseExpr prop_ParseExpr17,18
+prop_BinSSystem prop_BinSSystem19,20
+prop_BinSSystem prop_BinSSystem20,21
+prop_BinExpr prop_BinExpr22,23
+prop_BinExpr prop_BinExpr23,24
+checkParse checkParse25,26
+checkParse checkParse26,27
+sameResult sameResult31,32
+sameResult sameResult32,33
+sameResult2 sameResult234,35
+sameResult2 sameResult235,36
+isId isId37,38
+isId isId38,39
+checkSerialize checkSerialize40,41
+checkSerialize checkSerialize41,42
+quickCheckExit quickCheckExit43,44
+quickCheckExit quickCheckExit44,45
+failWith failWith48,49
+failWith failWith49,50
+runTests runTests52,53
+main main54,55

@@ -20,7 +20,6 @@ library
                      , Utils
                      , Parse
                      , Search
-                     , Square
   other-extensions:    DeriveFunctor
                      , TypeFamilies
                      , DeriveFoldable
@@ -42,6 +41,7 @@ library
                      , QuickCheck >= 2.8
                      , lens
                      , prelude-extras
+                     , Square
   ghc-options:         -Wall
   default-language:    Haskell2010
 

@@ -18,7 +18,7 @@ import           Data.Text           (append, concat, intercalate, pack)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
 import           Prelude             hiding (FilePath, concat)
-import           Square
+import           Data.Square
 import           SSystem
 import           Turtle              (Parser, Shell, Text, echo, empty, format,
                                       fp, inproc, mktempdir, mktempfile,
