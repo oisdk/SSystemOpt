@@ -6,7 +6,7 @@ packages:
     commit: b8d6b9feca60c105f60c585bb3cdc89752a22381
 - location:
     git: https://github.com/oisdk/Expr.git
-    commit: 5541516b983fe8335b0b0d67ee264b79326eaeba
+    commit: 7e624a792f7f7d6d6d93726cd952fcb5ffbec004
 - location:
     git: https://github.com/ekmett/recursion-schemes.git
     commit: cf42f2ace35ca09a8ab489538e9493f8333bc0ec
