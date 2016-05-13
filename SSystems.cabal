@@ -14,8 +14,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Expr
-                     , Solver
+  exposed-modules:     Solver
                      , SSystem
                      , Utils
                      , Parse
@@ -26,7 +25,6 @@ library
                      , LambdaCase
                      , OverloadedStrings
   build-depends:       base >= 4.7 && < 5
-                     , recursion-schemes
                      , free
                      , turtle
                      , text
@@ -42,6 +40,7 @@ library
                      , lens
                      , prelude-extras
                      , Square
+                     , Expr
   ghc-options:         -Wall
   default-language:    Haskell2010
 
@@ -69,4 +68,5 @@ Test-Suite ssystems-tests
                      , cereal
                      , comonad
                      , lens
+                     , Expr
   default-language:    Haskell2010

@@ -8,80 +8,6 @@ simData simData20,21
 main main22,23
 main main23,24
 
-./src/Expr.hs,1998
-import import23,24
-instance instance33,34
-data Func Func51,52
-    Sin Sin52,53
-    Sin | Cos Cos52,53
-    Sin | Cos | Exp Exp52,53
-    Sin | Cos | Exp | Log Log52,53
-    Sin | Cos | Exp | Log | Tan Tan52,53
-    Sin | Cos | Exp | Log | Tan | Atn Atn52,53
-    Sin | Cos | Exp | Log | Tan | Atn | AsnAsn52,53
-  | Acs Acs53,54
-  | Acs | Snh Snh53,54
-  | Acs | Snh | Csh Csh53,54
-  | Acs | Snh | Csh | Tnh Tnh53,54
-  | Acs | Snh | Csh | Tnh | Ach Ach53,54
-  | Acs | Snh | Csh | Tnh | Ach | Ash Ash53,54
-  | Acs | Snh | Csh | Tnh | Ach | Ash | AthAth53,54
-data ExprF ExprF57,58
-data ExprF a r = CstF CstF57,58
-               | FncF FncF58,59
-               | NegF NegF59,60
-               | PowF PowF60,61
-               | DivF DivF61,62
-               | PrdF PrdF62,63
-               | SumF SumF63,64
-cataM cataM75,76
-anaM anaM83,84
-zipo zipo85,86
-zipo zipo90,91
-type Expr Expr92,93
-roundShow roundShow94,95
-roundShow roundShow95,96
-prec prec101,102
-prec prec102,103
-assoc assoc111,112
-assoc assoc112,113
-normalize normalize117,118
-normalize normalize118,119
-approxEqual approxEqual122,123
-approxEqual approxEqual123,124
-zipAlg zipAlg127,128
-zipAlg zipAlg133,134
-data ExprN ExprN143,144
-    Cst Cst144,145
-  | Func Func145,146
-  | Neg Neg146,147
-  | ExprN ExprN147,148
-  | ExprN ExprN148,149
-  | ExprN ExprN149,150
-  | ExprN ExprN150,151
-fnc fnc153,154
-fnc fnc154,155
-type instance instance156,157
-type instance Base Base156,157
-arbAlg arbAlg181,182
-arbAlg arbAlg182,183
-fromDouble fromDouble224,225
-fromDouble fromDouble225,226
-eval eval227,228
-eval eval228,229
-evalAlg evalAlg230,231
-evalAlg evalAlg231,232
-safeEvalAlg safeEvalAlg240,241
-safeEvalAlg safeEvalAlg241,242
-safeEval safeEval245,246
-safeEval safeEval246,247
-prettyPrint prettyPrint248,249
-prettyPrint prettyPrint249,250
-pprAlg pprAlg251,252
-pprAlg pprAlg252,253
-appF appF296,297
-appF appF297,298
-
 ./src/Parse.hs,2031
 module ParseParse5,6
 type Parser Parser35,36
@@ -126,35 +52,35 @@ double double89,90
 function function90,91
 operators operators93,94
 operators operators94,95
-term term102,103
-term term103,104
-expr expr105,106
-expr expr106,107
-listOf listOf108,109
-listOf listOf109,110
-numLearn numLearn115,116
-numLearn numLearn116,117
-odeTup odeTup118,119
-odeTup odeTup121,122
-ode ode123,124
-ode ode124,125
-parseOde parseOde134,135
-parseOde parseOde135,136
-parseInitialValue parseInitialValue137,138
-parseInitialValue parseInitialValue138,139
-type FillState FillState140,141
-fillSSystem fillSSystem142,143
-fillSSystem fillSSystem143,144
-toSSystem toSSystem163,164
-toSSystem toSSystem164,165
-parseLines parseLines172,173
-parseLines parseLines173,174
-parseSystem parseSystem175,176
-parseSystem parseSystem176,177
-allFuncs allFuncs191,192
-allFuncs allFuncs192,193
-parseTester parseTester194,195
-parseTester parseTester195,196
+term term104,105
+term term105,106
+expr expr107,108
+expr expr108,109
+listOf listOf110,111
+listOf listOf111,112
+numLearn numLearn117,118
+numLearn numLearn118,119
+odeTup odeTup120,121
+odeTup odeTup123,124
+ode ode125,126
+ode ode126,127
+parseOde parseOde136,137
+parseOde parseOde137,138
+parseInitialValue parseInitialValue139,140
+parseInitialValue parseInitialValue140,141
+type FillState FillState142,143
+fillSSystem fillSSystem144,145
+fillSSystem fillSSystem145,146
+toSSystem toSSystem165,166
+toSSystem toSSystem166,167
+parseLines parseLines174,175
+parseLines parseLines175,176
+parseSystem parseSystem177,178
+parseSystem parseSystem178,179
+allFuncs allFuncs193,194
+allFuncs allFuncs194,195
+parseTester parseTester196,197
+parseTester parseTester197,198
 
 ./src/Search.hs,656
 module SearchSearch3,4
@@ -268,27 +194,25 @@ instance instance83,84
 evalSource evalSource88,89
 evalSource evalSource89,90
 
-./test/ssystems-tests.hs,692
+./test/ssystems-tests.hs,626
 module Main Main2,3
 prop_ParseExpr prop_ParseExpr16,17
 prop_ParseExpr prop_ParseExpr17,18
-prop_BinSSystem prop_BinSSystem19,20
 prop_BinSSystem prop_BinSSystem20,21
-prop_BinExpr prop_BinExpr22,23
-prop_BinExpr prop_BinExpr23,24
-checkParse checkParse25,26
-checkParse checkParse26,27
-sameResult sameResult31,32
-sameResult sameResult32,33
-sameResult2 sameResult234,35
-sameResult2 sameResult235,36
-isId isId37,38
-isId isId38,39
-checkSerialize checkSerialize40,41
-checkSerialize checkSerialize41,42
-quickCheckExit quickCheckExit43,44
-quickCheckExit quickCheckExit44,45
-failWith failWith48,49
-failWith failWith49,50
-runTests runTests52,53
-main main54,55
+prop_BinSSystem prop_BinSSystem21,22
+checkParse checkParse23,24
+checkParse checkParse24,25
+sameResult sameResult29,30
+sameResult sameResult30,31
+sameResult2 sameResult232,33
+sameResult2 sameResult233,34
+isId isId35,36
+isId isId36,37
+checkSerialize checkSerialize38,39
+checkSerialize checkSerialize39,40
+quickCheckExit quickCheckExit41,42
+quickCheckExit quickCheckExit42,43
+failWith failWith46,47
+failWith failWith47,48
+runTests runTests50,51
+main main52,53

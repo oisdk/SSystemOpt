@@ -23,7 +23,7 @@ import qualified Data.Map.Strict     as Map
 import           Data.Maybe
 import           Data.Ord
 import           Data.Text           (Text, pack)
-import           Expr
+import           Numeric.Expr
 import           Prelude             hiding (unlines)
 import           Data.Square
 import           SSystem
@@ -44,7 +44,7 @@ data ODE =
 
 data ParseState =
   ParseState { _odes     :: Map String ODE
-             , _initials :: Map String Expr
+             , _initials :: Map String (Expr Double)
              }
 
 makeLenses ''ParseState
@@ -65,16 +65,16 @@ languageDef =
     , Token.opStart        = Token.opLetter languageDef
     , Token.opLetter       = oneOf ":!#$%&*+./<=>?@\\^|-~"
     , Token.reservedOpNames= [ "+", "*", "=", "-", "^", "->", "..", "/"
-                              ] ++ funcNames
+                             ] ++ funcNames
     , Token.reservedNames  = "ddt" : funcNames
     , Token.caseSensitive  = True
-    } where funcNames = map show allFuncs
+    } where funcNames = ["abs", "signum"] ++ map show allFuncs
 
 -- Derived Parsers
 lexer :: Token.GenTokenParser Text () Identity
 reservedOp, reserved :: String -> Parser ()
 semiSep1 :: Parser a -> Parser [a]
-function :: Func -> Operator Text () Identity Expr
+function :: Func -> Operator Text () Identity (Expr Double)
 identifier :: Parser String
 whiteSpace, star, carat, hyph, eqsn, dots :: Parser ()
 double :: Parser Double
@@ -91,8 +91,10 @@ double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
 function f = Prefix $ (try . reservedOp . show) f $> (:$:) f
 
 -- Operator Table
-operators :: OperatorTable Text () Identity Expr
-operators =  [ map function (sortOn (Down . length . show) allFuncs)
+operators :: OperatorTable Text () Identity (Expr Double)
+operators =  [ [Prefix (reservedOp "signum" $> signum)]
+             , [Prefix (reservedOp "abs" $> abs)]
+             , map function (sortOn (Down . length . show) allFuncs)
              , [Prefix (reservedOp "-" $> negate)]
              , [Infix  (reservedOp "^" $> (**)) AssocRight]
              , [Infix  (reservedOp "/" $> (/) ) AssocLeft ]
@@ -100,10 +102,10 @@ operators =  [ map function (sortOn (Down . length . show) allFuncs)
              , [Infix  (reservedOp "-" $> (-) ) AssocLeft ]
              , [Infix  (reservedOp "+" $> (+) ) AssocLeft ] ]
 
-term :: Parser Expr
-term = Token.parens lexer expr <|> fmap Cst double
+term :: Parser (Expr Double)
+term = Token.parens lexer expr <|> fmap Lit double
 
-expr :: Parser Expr
+expr :: Parser (Expr Double)
 expr = buildExpressionParser operators term
 
 listOf :: Enum a => Parser a -> Parser [a]
@@ -135,12 +137,12 @@ ode = odeTup <$> side
 parseOde :: Parser (String, ODE)
 parseOde = (,) <$> (reserved "ddt" *> identifier) <*> (eqsn *> ode)
 
-parseInitialValue :: Parser (String, Expr)
+parseInitialValue :: Parser (String, Expr Double)
 parseInitialValue = (,) <$> identifier <*> (eqsn *> expr)
 
 type FillState a = StateT (Square (NumLearn,NumLearn)) (Either String) a
 
-fillSSystem :: Map String (ODE, Expr) -> FillState [STerm NumLearn]
+fillSSystem :: Map String (ODE, Expr Double) -> FillState [STerm NumLearn]
 fillSSystem m = itraverse fill vals where
   vals = Map.toList m
   idxs = Map.fromList (imap (\i (n,_) -> (n,i)) vals)
@@ -170,7 +172,7 @@ toSSystem (ParseState o i) = do
   (trms,exps) <- runStateT (fillSSystem m) s
   pure $ SSystem exps trms
 
-parseLines :: Parser [Either (String, ODE) (String, Expr)]
+parseLines :: Parser [Either (String, ODE) (String, Expr Double)]
 parseLines = whiteSpace *> semiSep1 (eitherA parseOde parseInitialValue)
 
 parseSystem :: String -> Text -> Either String (SSystem NumLearn)

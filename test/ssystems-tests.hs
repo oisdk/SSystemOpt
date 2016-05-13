@@ -7,21 +7,19 @@ import           Control.Monad
 import           Data.Functor
 import           Data.Ord
 import           Data.Serialize           (Serialize, decode, encode)
-import           Expr
+import           Numeric.Expr
 import           Parse
 import           SSystem
 import           System.Exit
 import           Test.QuickCheck
 import qualified Test.QuickCheck.Property as P
 
-prop_ParseExpr :: Expr -> P.Result
-prop_ParseExpr = checkParse expr roundShow prettyPrint approxEqual
+prop_ParseExpr :: Expr Double -> P.Result
+prop_ParseExpr = checkParse expr show showBracks (approxEqual eq) where
+  eq a b = abs (a-b) < 0.001
 
 prop_BinSSystem :: SSystem Int -> P.Result
 prop_BinSSystem = checkSerialize
-
-prop_BinExpr :: Expr -> P.Result
-prop_BinExpr = checkSerialize
 
 checkParse :: Parser a -> (a -> String) -> (a -> String) -> (a -> a -> Bool) -> a -> P.Result
 checkParse p d s e x = either fw eq (parseTester p (s x)) where
