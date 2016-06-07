@@ -8,6 +8,7 @@ module Solver
        , Simulation(..)
        , simOptions
        , withParams
+       , runSolver
        ) where
 
 import           Control.Lens        hiding (strict)

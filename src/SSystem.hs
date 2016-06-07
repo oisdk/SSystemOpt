@@ -2,14 +2,17 @@
 {-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
 module SSystem where
 
+import           Control.Arrow
 import           Control.Lens
+import           Control.Monad.Reader
 import           Data.Serialize
 import           Data.Square
-import           Data.String
 import           GHC.Generics
 import           Numeric.Expr
 import           Test.QuickCheck
@@ -50,14 +53,36 @@ instance Serialize a => Serialize (SSystem a)
 
 type NumLearn = Either Double [Double]
 
-toEqns :: (Eq a, Floating a) => SSystem a -> [VarExpr a]
-toEqns (SSystem q t) = imap (f q) t where
-  f :: (Eq a, Floating a) => Square (a,a) -> Int -> STerm a -> VarExpr a
-  f _ _ (STerm 0 0 _ _) = 0
-  f s i (STerm n 0 _ _) = foldr (*) (vlit n) (m s i _1)
-  f s i (STerm 0 n _ _) = foldr (*) (negate $ vlit n) (m s i _2)
-  f s i (STerm p n _ _) = foldr (*) (vlit p) (m s i _1) - foldr (*) (vlit n) (m s i _2)
-  l s i g = [vlit $ s ^?! ix (i,j) . g | j <- [0..(_squareSize s - 1)]]
-  r e = [ fromString x ** p | (x,p) <- zip (map _name t) e, p /= 0]
-  m s i g = r $ l s i g
-  vlit = VarExpr . Right . LitF
+data SSystemState a = SSystemState
+  { _variables :: [String]
+  , _square    :: Square (a,a) }
+
+makeLenses ''SSystemState
+
+toEqns :: (Eq a, Floating a, CanVar a) => SSystem a -> [a]
+toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.name) q) where
+  size = q^.squareSize - 1
+  inds = [0..size]
+  f l (STerm p n _ _) = do
+    bind <- traverse (preview . (square .) . ix . flip (,) l) inds
+    exps <- views variables (zip (bind^..traversed._Just))
+    let lhs = foldr (combine _1) p exps
+    let rhs = foldr (combine _2) n exps
+    pure (subS lhs rhs)
+  combine side =
+    mulS . uncurry powS . (view side *** review _Var)
+  powS 1 _ = 1
+  powS _ 0 = 1
+  powS x 1 = x
+  powS x y = x ** y
+  mulS 0 _ = 0
+  mulS _ 0 = 0
+  mulS 1 x = x
+  mulS x 1 = x
+  mulS x y = x * y
+  subS x 0 = x
+  subS 0 x = -x
+  subS x y = x - y
+
+toEqVars :: (Eq a, Floating a) => SSystem (Either a b) -> Source String [VarExpr a]
+toEqVars = fmap toEqns . traverse (either (pure . Lit) (const $ fmap (review _Var) pop))

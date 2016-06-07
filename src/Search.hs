@@ -14,10 +14,10 @@ import qualified Data.Map            as Map
 import           Utils
 
 
-eachNext :: Int -> a -> a -> [[a]]
-eachNext m a b = f m where
-  f 0 = [[]]
-  f n = [ x:xs | x <- [a,b], xs <- f (n-1) ]
+-- eachNext :: Int -> a -> a -> [[a]]
+-- eachNext m a b = f m where
+--   f 0 = [[]]
+--   f n = [ x:xs | x <- [a,b], xs <- f (n-1) ]
 
 eachOf :: [[a]] -> [[a]]
 eachOf = foldr (liftA2 (:)) [[]]
@@ -31,9 +31,10 @@ searchGrouped = map (map fst . sortOn snd . ((\(h,t) -> map ((,) h) t) =<<)) . e
 
 lattice :: Ord a => [[a]] -> [[a]]
 lattice = searchGrouped . groupWithPos
-lattice' :: Ord a => [[a]] -> [[a]]
-lattice' = map (map snd . sortOn fst) . Map.foldrWithKey f [[]] . groupWithPos where
-  f k v b =  [ zip v h ++ t | hs <- (zipWith ((eachNext.length) v) <*> tail) k, h <- hs, t <- b]
+
+-- lattice' :: Ord a => [[a]] -> [[a]]
+-- lattice' = map (map snd . sortOn fst) . Map.foldrWithKey f [[]] . groupWithPos where
+--   f k v b =  [ zip v h ++ t | hs <- (zipWith ((eachNext.length) v) <*> tail) k, h <- hs, t <- b]
 
 
 rmse :: [[Double]] -> [[Double]] -> Double
@@ -56,8 +57,8 @@ search sim obs = maybe (pure Nothing) close <=< (minOnA metFnc . lattice) where
   close = go [] where
     go ys [] = pure $ Just ys
     go ys (x:xs) = maybe (pure Nothing) (`go` xs) =<< prepWith (around x) where
-      around x = minOnA (metFnc . (\h -> ys ++ (h:xs))) [x-0.5, x, x+0.5]
-      prepWith = (fmap.fmap) (\x -> ys ++ [x])
+      around y = minOnA (metFnc . (\h -> ys ++ (h:xs))) [y-0.5, y, y+0.5]
+      prepWith = (fmap.fmap) (\y -> ys ++ [y])
 
 newtype MaxMaybe a = MaxMaybe { getMaxMaybe :: Maybe a
                               } deriving (Functor, Eq)

@@ -87,7 +87,8 @@ semiSep1 = Token.semiSep1 lexer
 star = reservedOp "*"; carat = reservedOp "^"
 hyph = reservedOp "-"; eqsn = reservedOp "="
 dots = reservedOp ".."
-double = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
+double = (hyph *> fmap negate num) <|> num where
+  num = try (Token.float lexer) <|> fromInteger <$> Token.integer lexer
 function f = Prefix $ (try . reservedOp . show) f $> (:$:) f
 
 -- Operator Table
@@ -173,7 +174,7 @@ toSSystem (ParseState o i) = do
   pure $ SSystem exps trms
 
 parseLines :: Parser [Either (String, ODE) (String, Expr Double)]
-parseLines = whiteSpace *> semiSep1 (eitherA parseOde parseInitialValue)
+parseLines = whiteSpace *> semiSep1 (eitherA parseOde parseInitialValue) <* (eof)
 
 parseSystem :: String -> Text -> Either String (SSystem NumLearn)
 parseSystem s =
