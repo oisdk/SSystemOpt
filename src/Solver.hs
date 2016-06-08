@@ -60,7 +60,7 @@ instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
   taylorDecls s = initials s  : derivs s where
     initials (SSystem _ t) =
       "initial_values=" `append` intercalate ", " (repr._initial <$> t)
-    derivs (SSystem sq t) = imap f (zip uniqNames t) where
+    derivs (SSystem sq t) = imap f (zip (foldr (:) [] uniqNames) t) where
       f i (c, STerm post negt _ _) =
         concat ["diff(", pack c, ", t) = ", showOde post negt] where
           showOde 0 0 = "0"
@@ -70,7 +70,7 @@ instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
           showSide 1 [] = "1"
           showSide 1 xs = intercalate " * " xs
           showSide n l = repr n `append` prepToAll " * " l
-          side l = catMaybes $ zipWith expshow uniqNames (evals l)
+          side l = catMaybes $ zipWith expshow (foldr (:) [] uniqNames) (evals l)
           evals l = [ sq ^?! ix (i,j) . l | j <- [0..(_squareSize sq - 1)]]
           expshow _ 0 = Nothing
           expshow n 1 = Just $ pack n
@@ -135,6 +135,6 @@ runMemo = flip evalStateT mempty
 
 withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem Double)
 withParams s =
-  maybe (Left err) Right .
-    evalSource (traverse (either pure (const pop)) s) where
-      err = "Mismatched params"
+    evalStateT (traverse (either pure (const pop')) s) where
+      pop' = StateT (maybe err Right . uncons)
+      err = Left "Mismatched params"

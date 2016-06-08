@@ -1,10 +1,16 @@
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable        #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE DeriveTraversable     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Utils where
 
 import           Control.Applicative
-import           Control.Arrow       (first)
-import           Control.Monad       ((<=<))
+import           Control.Lens
+import           Control.Monad.State
 import           Data.Foldable
 import           Data.Map.Strict     (Map)
 import qualified Data.Map.Strict     as Map
@@ -32,8 +38,9 @@ bool :: a -> a -> Bool -> a
 bool t _ True  = t
 bool _ f False = f
 
-uniqNames :: [String]
-uniqNames = flip (:) <$> [] : uniqNames <*> ['a'..'z']
+uniqNames :: Stream String
+uniqNames = foldr Stream undefined un' where
+  un' = flip (:) <$> [] : un' <*> ['a'..'z']
 
 eitherA :: Alternative f => f a -> f b -> f (Either a b)
 eitherA x y = Left <$> x <|> Right <$> y
@@ -72,19 +79,49 @@ symmetricDifference :: Ord d
                     -> Map d (Either a b)
 symmetricDifference = Map.mergeWithKey (\_ _ _ -> Nothing) (Map.map Left) (Map.map Right)
 
-newtype Source s a =
-  Source { runSource :: [s] -> Maybe (a, [s])
-         } deriving (Functor)
+data Stream a = Stream
+  { _streamHead :: a
+  , _streamTail :: Stream a
+  } deriving (Functor, Foldable, Traversable)
 
-pop :: Source s s
-pop = Source uncons where
-  uncons [] = Nothing
-  uncons (x:xs) = Just (x, xs)
+makeLenses ''Stream
 
-instance Applicative (Source s) where
-  pure x = Source (\s -> Just (x, s))
-  Source f <*> Source x =
-    Source ((\(g,s) -> first g <$> x s) <=< f)
+instance Cons (Stream a) (Stream b) a b where
+  _Cons = iso (\(Stream x xs) -> (x,xs)) (uncurry Stream)
 
-evalSource :: Source s a -> [s] -> Maybe a
-evalSource s = fmap fst . runSource s
+data SourceState s = SourceState
+  { _given  :: [s]
+  , _source :: Stream s
+  } deriving (Functor, Foldable, Traversable)
+
+makeLenses ''SourceState
+
+pop :: MonadState (SourceState s) m => m s
+pop = do
+  x <- use (source.streamHead)
+  source %= view streamTail
+  given %= (|> x)
+  pure x
+
+type Source s = State (SourceState s)
+
+evalUniques :: Source String a -> a
+evalUniques = flip evalState (SourceState [] uniqNames)
+
+
+-- newtype Source s a =
+--   Source { runSource :: [s] -> Maybe (a, [s])
+--          } deriving (Functor)
+
+-- pop :: Source s s
+-- pop = Source uncons where
+--   uncons [] = Nothing
+--   uncons (x:xs) = Just (x, xs)
+
+-- instance Applicative (Source s) where
+--   pure x = Source (\s -> Just (x, s))
+--   Source f <*> Source x =
+--     Source ((\(g,s) -> first g <$> x s) <=< f)
+
+-- evalSource :: Source s a -> [s] -> Maybe a
+-- evalSource s = fmap fst . runSource s

@@ -5,12 +5,14 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 module SSystem where
 
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad.Reader
+
 import           Data.Serialize
 import           Data.Square
 import           GHC.Generics
@@ -28,6 +30,14 @@ data STerm a =
 
 makeLenses ''STerm
 
+data SEqn a = SEqn
+  { _forVar :: String
+  , _posFac :: a
+  , _posTerms :: [(String, a)]
+  , _negFac :: a
+  , _negTerms :: [(String, a)]}
+
+
 instance Arbitrary a => Arbitrary (STerm a) where
   arbitrary = STerm <$> arbitrary
                     <*> arbitrary
@@ -43,6 +53,7 @@ data SSystem a =
                      , Traversable)
 
 makeLenses ''SSystem
+
 
 instance Arbitrary a => Arbitrary (SSystem a) where
   arbitrary = sized $ \n ->
@@ -70,9 +81,9 @@ toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.na
     let rhs = foldr (combine _2) n exps
     pure (subS lhs rhs)
   combine side =
-    mulS . uncurry powS . (view side *** review _Var)
-  powS 1 _ = 1
+    mulS . uncurry (flip powS) . (view side *** review _Var)
   powS _ 0 = 1
+  powS 1 _ = 1
   powS x 1 = x
   powS x y = x ** y
   mulS 0 _ = 0
