@@ -74,7 +74,7 @@ toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.na
   size = q^.squareSize - 1
   inds = [0..size]
   f l (STerm p n _ _) = do
-    bind <- traverse (preview . (square .) . ix . flip (,) l) inds
+    bind <- traverse (preview . (square .) . ix . (,) l) inds
     exps <- views variables (zip (bind^..traversed._Just))
     let lhs = foldr (combine _1) p exps
     let rhs = foldr (combine _2) n exps
