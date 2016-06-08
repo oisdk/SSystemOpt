@@ -12,7 +12,6 @@ module SSystem where
 import           Control.Arrow
 import           Control.Lens
 import           Control.Monad.Reader
-
 import           Data.Serialize
 import           Data.Square
 import           GHC.Generics

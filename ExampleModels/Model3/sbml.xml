@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <sbml xmlns="http://www.sbml.org/sbml/level2/version3" version="3" level="2">
   <model name="ssystem">
     <listOfUnitDefinitions>
@@ -31,6 +32,7 @@
     </listOfParameters>
     <listOfReactions>
       <reaction id="diff_x0">
+        <listOfReactants />
         <listOfProducts>
           <speciesReference species="x0" />
         </listOfProducts>
@@ -41,35 +43,16 @@
         </kineticLaw>
       </reaction>
       <reaction id="diff_x1">
-        <listOfReactants>
-          <speciesReference species="x0" />
-          <speciesReference species="x4" />
-        </listOfReactants>
+        <listOfReactants />
         <listOfProducts>
           <speciesReference species="x1" />
         </listOfProducts>
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
-              <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x0</ci>
-                  <ci>1.0</ci>
-                </apply>
-                <ci>1.0</ci>
-              </apply>
-              <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x4</ci>
-                  <ci>a</ci>
-                </apply>
-                <ci>1.4399999999999999e-3</ci>
-              </apply>
+              <minus />
+              <ci>1.0</ci>
+              <ci>1.4399999999999999e-3</ci>
             </apply>
           </math>
         </kineticLaw>
@@ -84,12 +67,8 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <times/>
-              <apply>
-                <power/>
-                <ci>x2</ci>
-                <ci>b</ci>
-              </apply>
+              <times />
+              <ci>x2</ci>
               <ci>-9.7e-4</ci>
             </apply>
           </math>
@@ -97,8 +76,7 @@
       </reaction>
       <reaction id="diff_x11">
         <listOfReactants>
-          <speciesReference species="x4" />
-          <speciesReference species="x2" />
+          <speciesReference species="x5" />
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="x11" />
@@ -106,25 +84,13 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
+              <minus />
               <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x4</ci>
-                  <ci>d</ci>
-                </apply>
+                <times />
+                <ci>x5</ci>
                 <ci>7.199999999999999e-4</ci>
               </apply>
-              <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x2</ci>
-                  <ci>c</ci>
-                </apply>
-                <ci>9.7e-4</ci>
-              </apply>
+              <ci>9.7e-4</ci>
             </apply>
           </math>
         </kineticLaw>
@@ -132,6 +98,8 @@
       <reaction id="diff_x2">
         <listOfReactants>
           <speciesReference species="x10" />
+          <speciesReference species="x11" />
+          <speciesReference species="x3" />
           <speciesReference species="x5" />
         </listOfReactants>
         <listOfProducts>
@@ -140,75 +108,61 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
+              <minus />
               <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x10</ci>
-                  <ci>1.0</ci>
-                </apply>
-                <ci>1.0</ci>
+                <power />
+                <ci>x10</ci>
+                <ci>b</ci>
               </apply>
               <apply>
-                <times/>
+                <times />
                 <apply>
-                  <power/>
-                  <ci>x5</ci>
-                  <ci>e</ci>
+                  <power />
+                  <ci>x11</ci>
+                  <ci>c</ci>
                 </apply>
-                <ci>-1.4399999999999999e-3</ci>
+                <apply>
+                  <times />
+                  <apply>
+                    <power />
+                    <ci>x3</ci>
+                    <ci>-1.4399999999999999e-3</ci>
+                  </apply>
+                  <apply>
+                    <times />
+                    <apply>
+                      <power />
+                      <ci>x5</ci>
+                      <ci>i</ci>
+                    </apply>
+                    <ci>-1.4399999999999999e-3</ci>
+                  </apply>
+                </apply>
               </apply>
             </apply>
           </math>
         </kineticLaw>
       </reaction>
       <reaction id="diff_x3">
-        <listOfReactants>
-          <speciesReference species="x4" />
-          <speciesReference species="x2" />
-          <speciesReference species="x5" />
-        </listOfReactants>
+        <listOfReactants />
         <listOfProducts>
           <speciesReference species="x3" />
         </listOfProducts>
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
-              <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x4</ci>
-                  <ci>-1.0</ci>
-                </apply>
-                <ci>1.4399999999999999e-3</ci>
-              </apply>
-              <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x2</ci>
-                  <ci>-1.4399999999999999e-3</ci>
-                </apply>
-                <apply>
-                  <times/>
-                  <apply>
-                    <power/>
-                    <ci>x5</ci>
-                    <ci>f</ci>
-                  </apply>
-                  <ci>10.0</ci>
-                </apply>
-              </apply>
+              <minus />
+              <ci>1.4399999999999999e-3</ci>
+              <ci>10.0</ci>
             </apply>
           </math>
         </kineticLaw>
       </reaction>
       <reaction id="diff_x4">
         <listOfReactants>
-          <speciesReference species="x40" />
+          <speciesReference species="x11" />
+          <speciesReference species="x3" />
+          <speciesReference species="x1" />
           <speciesReference species="x4" />
         </listOfReactants>
         <listOfProducts>
@@ -217,24 +171,36 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
+              <minus />
               <apply>
-                <times/>
+                <times />
                 <apply>
-                  <power/>
-                  <ci>x40</ci>
-                  <ci>1.0</ci>
+                  <power />
+                  <ci>x11</ci>
+                  <ci>d</ci>
                 </apply>
-                <ci>1.0</ci>
+                <apply>
+                  <power />
+                  <ci>x3</ci>
+                  <ci>-1.0</ci>
+                </apply>
               </apply>
               <apply>
-                <times/>
+                <times />
                 <apply>
-                  <power/>
-                  <ci>x4</ci>
-                  <ci>g</ci>
+                  <power />
+                  <ci>x1</ci>
+                  <ci>a</ci>
                 </apply>
-                <ci>2.8799999999999997e-3</ci>
+                <apply>
+                  <times />
+                  <apply>
+                    <power />
+                    <ci>x4</ci>
+                    <ci>g</ci>
+                  </apply>
+                  <ci>2.8799999999999997e-3</ci>
+                </apply>
               </apply>
             </apply>
           </math>
@@ -242,7 +208,7 @@
       </reaction>
       <reaction id="diff_x40">
         <listOfReactants>
-          <speciesReference species="x5" />
+          <speciesReference species="x4" />
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="x40" />
@@ -250,12 +216,8 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <times/>
-              <apply>
-                <power/>
-                <ci>x5</ci>
-                <ci>h</ci>
-              </apply>
+              <times />
+              <ci>x4</ci>
               <ci>-7.199999999999999e-4</ci>
             </apply>
           </math>
@@ -263,8 +225,9 @@
       </reaction>
       <reaction id="diff_x5">
         <listOfReactants>
-          <speciesReference species="x11" />
+          <speciesReference species="x40" />
           <speciesReference species="x2" />
+          <speciesReference species="x3" />
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="x5" />
@@ -272,30 +235,35 @@
         <kineticLaw>
           <math xmlns="http://www.w3.org/1998/Math/MathML">
             <apply>
-              <minus/>
+              <minus />
               <apply>
-                <times/>
-                <apply>
-                  <power/>
-                  <ci>x11</ci>
-                  <ci>1.0</ci>
-                </apply>
-                <ci>1.0</ci>
+                <power />
+                <ci>x40</ci>
+                <ci>h</ci>
               </apply>
               <apply>
-                <times/>
+                <times />
                 <apply>
-                  <power/>
+                  <power />
                   <ci>x2</ci>
-                  <ci>i</ci>
+                  <ci>e</ci>
                 </apply>
-                <ci>2.8799999999999997e-3</ci>
+                <apply>
+                  <times />
+                  <apply>
+                    <power />
+                    <ci>x3</ci>
+                    <ci>f</ci>
+                  </apply>
+                  <ci>2.8799999999999997e-3</ci>
+                </apply>
               </apply>
             </apply>
           </math>
         </kineticLaw>
       </reaction>
       <reaction id="diff_x6">
+        <listOfReactants />
         <listOfProducts>
           <speciesReference species="x6" />
         </listOfProducts>

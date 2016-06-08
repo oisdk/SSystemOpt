@@ -1,19 +1,19 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module SBML where
 
 import           Control.Lens
-import Data.Text.IO (readFile)
-import Data.Text.Lazy.IO (putStr)
-import Prelude hiding (readFile, putStr)
 import           Data.String
+import           Data.Text.IO      (readFile)
+import           Data.Text.Lazy.IO (writeFile)
 import           Numeric.Expr
+import           Parse
+import           Prelude           hiding (readFile, writeFile)
 import           SSystem
 import           Text.Taggy
 import           Utils
-import Parse
 
 toSBML :: (MathML a, Eq a, Floating a, Show a, Eq b) => SSystem (Either a b) -> Node
 toSBML s = evalUniques outr where
@@ -55,9 +55,7 @@ toSBML s = evalUniques outr where
       , ("initialAmount", fromString ia)]
       []
 
-fromFile :: String -> IO ()
-fromFile file = do
-  system <- readFile file
-  case parseSystem "" system of
-    Right s -> putStr . render . toSBML $ s
-    Left s -> putStrLn s
+fromFile :: String -> String -> IO ()
+fromFile file out =
+  either putStrLn (writeFile out . render . toSBML) .
+  parseSystem "" =<< readFile file

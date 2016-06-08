@@ -1,0 +1,61 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{fullpage}
+\usepackage{longtable}
+\begin{document}
+\section*{Differential Equations}
+\providecommand{\tabfrac}[2]{%
+   \setlength{\fboxrule}{0pt}%
+   \fbox{$\frac{#1}{#2}$}}
+\begin{longtable}{lll}
+$ \tabfrac{d\,\left[\mathrm{x0}\right]}{dt} $ &=& $ 0 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x1}\right]}{dt} $ &=& $ 0.99281 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x1}\right],\,\mathrm{a}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,0.5\right) \cdot \operatorname{pow}\left(\left[\mathrm{x5}\right],\,\mathrm{f}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x7}\right],\,\mathrm{i}\right) \cdot 0.00719 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x2}\right]}{dt} $ &=& $ -\left(\operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{c}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x4}\right],\,\mathrm{e}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{h}\right) \cdot 0.00719 - \operatorname{pow}\left(\left[\mathrm{x3}\right],\,\mathrm{d}\right)\right) $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x3}\right]}{dt} $ &=& $ -\left(\operatorname{pow}\left(\left[\mathrm{x3}\right],\,0.5\right) \cdot \operatorname{pow}\left(\left[\mathrm{x5}\right],\,\mathrm{f}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x7}\right],\,\mathrm{i}\right) \cdot 0.00719 - \operatorname{pow}\left(\left[\mathrm{x1}\right],\,\mathrm{a}\right)\right) $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,\mathrm{d}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{c}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x4}\right],\,\mathrm{e}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{h}\right) \cdot 0.00719 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x4}\right]}{dt} $ &=& $ \operatorname{pow}\left(\left[\mathrm{x3}\right],\,0.5\right) \cdot \operatorname{pow}\left(\left[\mathrm{x5}\right],\,\mathrm{f}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x7}\right],\,\mathrm{i}\right) \cdot 0.00719 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,\mathrm{d}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x1}\right],\,\mathrm{a}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{c}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x4}\right],\,\mathrm{e}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{h}\right) \cdot 0.00719 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x5}\right]}{dt} $ &=& $ \operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{c}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x4}\right],\,\mathrm{e}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{h}\right) \cdot 0.00719 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x1}\right],\,\mathrm{a}\right) $\\
+ & & $ + \, \left[\mathrm{x5}\right] \cdot 0.0048535 $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,\mathrm{d}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,0.5\right) \cdot \operatorname{pow}\left(\left[\mathrm{x5}\right],\,\mathrm{f}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x7}\right],\,\mathrm{i}\right) \cdot 0.00719 $\\
+ & & $ - \, 0.00719 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x6}\right]}{dt} $ &=& $ 0.00719 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{b}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{g}\right) \cdot 0.009707 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,\mathrm{d}\right) $\\
+ & & $ - \, \left[\mathrm{x5}\right] \cdot 0.0048535 $\\
+ & & $ - \, 0.00719 $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x2}\right],\,\mathrm{c}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x4}\right],\,\mathrm{e}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x6}\right],\,\mathrm{h}\right) \cdot 0.00719 $\\[5mm]
+$ \tabfrac{d\,\left[\mathrm{x7}\right]}{dt} $ &=& $ 0.00719 $\\
+ & & $ + \, \operatorname{pow}\left(\left[\mathrm{x1}\right],\,\mathrm{a}\right) $\\
+ & & $ - \, \operatorname{pow}\left(\left[\mathrm{x3}\right],\,0.5\right) \cdot \operatorname{pow}\left(\left[\mathrm{x5}\right],\,\mathrm{f}\right) \cdot \operatorname{pow}\left(\left[\mathrm{x7}\right],\,\mathrm{i}\right) \cdot 0.00719 $\\[5mm]
+\end{longtable}
+\section*{Optimizable Parameters}
+\begin{longtable}{|r|l|}
+\hline
+$\mathrm{a}$& $0.0$\\
+\hline
+$\mathrm{b}$& $0.0$\\
+\hline
+$\mathrm{c}$& $0.0$\\
+\hline
+$\mathrm{d}$& $0.0$\\
+\hline
+$\mathrm{e}$& $0.0$\\
+\hline
+$\mathrm{f}$& $0.0$\\
+\hline
+$\mathrm{g}$& $0.0$\\
+\hline
+$\mathrm{h}$& $0.0$\\
+\hline
+$\mathrm{i}$& $0.0$\\
+\hline
+\end{longtable}
+\end{document}
