@@ -5,13 +5,13 @@ module Main where
 import           Control.Applicative
 import           Control.Monad
 import           Data.Functor
+import           Data.List                (sort)
 import           Data.Serialize           (Serialize, decode, encode)
+import           Parse
 import           SSystem
-import Parse
-import Data.List (sort)
 import           System.Exit
 import           Test.DocTest
-import           Test.QuickCheck hiding (listOf)
+import           Test.QuickCheck          hiding (listOf)
 import qualified Test.QuickCheck.Property as P
 
 prop_BinSSystem :: SSystem Int -> P.Result
