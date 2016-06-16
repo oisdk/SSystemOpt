@@ -2,9 +2,6 @@ resolver: lts-5.16
 packages:
 - '.'
 - location:
-    git: https://github.com/oisdk/Square.git
-    commit: b8d6b9feca60c105f60c585bb3cdc89752a22381
-- location:
     git: https://github.com/oisdk/Expr.git
     commit: 42c8d1dc9daf7d4d2117a663e45bd4958d73001e
 - location:

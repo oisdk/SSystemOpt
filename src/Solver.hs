@@ -15,11 +15,11 @@ import           Control.Lens        hiding (strict)
 import           Control.Monad.State
 import           Data.Map.Strict     (Map)
 import           Data.Maybe
+import qualified Data.Sequence       as Seq
 import           Data.Text           (append, concat, intercalate, pack)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
 import           Prelude             hiding (FilePath, concat)
-import           Data.Square
 import           SSystem
 import           Turtle              (Parser, Shell, Text, echo, empty, format,
                                       fp, inproc, mktempdir, mktempfile,
@@ -30,7 +30,7 @@ import           Utils
 class TaylorCompat a where taylorDecls :: a -> [Text]
 
 taylorSource :: TaylorCompat a => a -> Text
-taylorSource = concat . map (`append` ";\n") . taylorDecls
+taylorSource = Text.concat . map (`append` ";\n") . taylorDecls
 
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
@@ -71,7 +71,7 @@ instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
           showSide 1 xs = intercalate " * " xs
           showSide n l = repr n `append` prepToAll " * " l
           side l = catMaybes $ zipWith expshow (foldr (:) [] uniqNames) (evals l)
-          evals l = [ sq ^?! ix (i,j) . l | j <- [0..(_squareSize sq - 1)]]
+          evals l = [ sq ^?! ix i . ix j . l | j <- [0..(Seq.length sq - 1)]]
           expshow _ 0 = Nothing
           expshow n 1 = Just $ pack n
           expshow n e = Just $ concat [pack n, " ^ ", repr e]

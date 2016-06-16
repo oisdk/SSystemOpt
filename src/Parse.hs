@@ -23,7 +23,8 @@ import           Data.List
 import           Data.Map.Strict             (Map)
 import qualified Data.Map.Strict             as Map
 import           Data.Maybe
-import           Data.Square
+import           Data.Sequence               (Seq)
+import qualified Data.Sequence               as Seq
 import           Data.Text                   (Text, unpack)
 import           Numeric.Expr
 import           Prelude                     hiding (unlines)
@@ -121,7 +122,7 @@ parseOde = (,) <$> (reserve identStyle "ddt" *> ident identStyle) <*> (symbol "=
 parseInitialValue :: (Monad m, TokenParsing m) => m (String, Expr Double)
 parseInitialValue = (,) <$> ident identStyle <*> (symbol "=" *> exprParse)
 
-type FillState a = StateT (Square (NumLearn,NumLearn)) (Either String) a
+type FillState a = StateT (Seq (Seq (NumLearn,NumLearn))) (Either String) a
 
 fillSSystem :: Map String (ODE, Expr Double) -> FillState [STerm NumLearn]
 fillSSystem m = itraverse fill vals where
@@ -140,7 +141,7 @@ fillSSystem m = itraverse fill vals where
             -> FillState ()
   updSquare p i s = forM_ (Map.toList p) $ \(en,ev) -> do
       j <- maybe (lift . Left . err' $ en) pure (Map.lookup en idxs)
-      ix (i,j) . s .= ev
+      ix i . ix j . s .= ev
   err' :: String -> String
   err' en = "Variable without ode: " ++ en
 
@@ -149,7 +150,7 @@ toSSystem (ParseState o i) = do
   let err' xs = "Equations not matched: " ++ show xs
   m <- over _Left err' $ mergeMatch (,) o i
   let n = Map.size m
-  let s = runIdentity $ create n (Identity (Left 0, Left 0))
+  let s = Seq.replicate n (Seq.replicate n (Left 0, Left 0))
   (trms,exps') <- runStateT (fillSSystem m) s
   pure $ SSystem exps' trms
 

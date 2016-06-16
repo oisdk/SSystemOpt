@@ -22,7 +22,6 @@ library
                      , cereal
                      , QuickCheck >= 2.8
                      , lens
-                     , Square
                      , Expr
                      , taggy
                      , taggy-lens
