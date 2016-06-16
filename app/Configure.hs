@@ -6,7 +6,6 @@ import           Control.Applicative
 import           Control.Lens        hiding (strict, view)
 import           Control.Monad.State
 import           Data.Maybe
-import           Data.Text           (unpack)
 import           Data.Text.Read      (double)
 import           Parse               (parseSystem)
 import           Prelude             hiding (FilePath)
@@ -14,7 +13,7 @@ import           Search
 import           Solver
 import           SSystem
 import           Turtle              (FilePath, Parser, Shell, die, echo,
-                                      format, fp, input, optPath, options,
+                                      input, optPath, options,
                                       strict, view)
 import           Turtle.Prelude      (readline)
 import           Utils
@@ -31,8 +30,7 @@ main = view $ do
                                           <*> modelPath
                                           <*> simOptions)
   modelCode <- (strict . input) l
-  let desc = (unpack . format fp) l
-  model <- toDie (parseSystem desc modelCode)
+  model <- toDie (parseSystem modelCode)
   let simulator = simMemo (fmap config . toDie . withParams model)
   simulation <- case d of
     Just x -> (toDie . parseOut) =<< (strict . input) x

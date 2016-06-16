@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE DeriveTraversable #-}
@@ -18,6 +19,7 @@ import           GHC.Generics
 import           Numeric.Expr
 import           Test.QuickCheck
 import           Utils
+import GHC.Exts
 
 data STerm a =
   STerm { _pos     :: a
@@ -69,18 +71,20 @@ data SSystemState a = SSystemState
 
 makeLenses ''SSystemState
 
-toEqns :: (Eq a, Floating a, CanVar a) => SSystem a -> [a]
+toEqns :: (ExprType a, VarType a ~ 'HasVar s
+          , IsString s, Eq a, Floating a, Show s)
+       => SSystem a -> [a]
 toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.name) q) where
   size = q^.squareSize - 1
   inds = [0..size]
   f l (STerm p n _ _) = do
     bind <- traverse (preview . (square .) . ix . (,) l) inds
-    exps <- views variables (zip (bind^..traversed._Just))
-    let lhs = foldr (combine _1) p exps
-    let rhs = foldr (combine _2) n exps
+    exps' <- views variables (zip (bind^..traversed._Just))
+    let lhs = foldr (combine _1) p exps'
+    let rhs = foldr (combine _2) n exps'
     pure (subS lhs rhs)
   combine side =
-    mulS . uncurry (flip powS) . (view side *** review _Var)
+    mulS . uncurry (flip powS) . (view side *** (Var . fromString))
   powS _ 0 = 1
   powS 1 _ = 1
   powS x 1 = x
@@ -95,4 +99,4 @@ toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.na
   subS x y = x - y
 
 toEqVars :: (Eq a, Floating a) => SSystem (Either a b) -> Source String [VarExpr a]
-toEqVars = fmap toEqns . traverse (either (pure . Lit) (const $ fmap (review _Var) pop))
+toEqVars = fmap toEqns . traverse (either (pure . Lit) (const $ fmap (Var . fromString) pop))
