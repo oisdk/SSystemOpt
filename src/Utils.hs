@@ -17,11 +17,22 @@ import qualified Data.Map.Strict     as Map
 import           Data.Text           (pack)
 import           Turtle              (Shell, die)
 
+-- | Inserts a value into a map, only if it's not already present
+-- >>> insertUnique "a" "b" (Map.fromList [])
+-- Right (fromList [("a","b")])
+-- >>> insertUnique "a" "b" (Map.fromList [("a", "b")])
+-- Left "a"
 insertUnique :: Ord k => k -> a -> Map k a -> Either k (Map k a)
 insertUnique key val m = case Map.insertLookupWithKey (\_ n _ -> n) key val m of
   (Just _,_) -> Left key
   (Nothing,n) -> Right n
 
+-- | Sorts a list of tuples, returning left if any keys
+-- are repeated
+-- >>> sortUniques [(3,2),(1,4)]
+-- Right [(1,4),(3,2)]
+-- >>> sortUniques [(3,2),(3,5)]
+-- Left 3
 sortUniques :: (Foldable f, Ord a) => f (a, b) -> Either a [(a,b)]
 sortUniques = fmap Map.assocs . foldrM (uncurry insertUnique) Map.empty
 
@@ -47,15 +58,6 @@ eitherA x y = Left <$> x <|> Right <$> y
 
 toDie :: Either String a -> Shell a
 toDie = either (die . pack) pure
-
-eitherToMaybe :: Either a b -> Maybe b
-eitherToMaybe (Left _) = Nothing
-eitherToMaybe (Right x) = Just x
-
-replicateA :: Applicative f => Int -> f a -> f [a]
-replicateA m x = go m where
-  go 0 = pure []
-  go n = (:) <$> x <*> go (n-1)
 
 minOnA :: (Foldable t, Applicative f, Ord b) => (a -> f b) -> t a -> f (Maybe a)
 minOnA cnv = (fmap.fmap) fst . foldr f (pure Nothing) where
@@ -107,21 +109,3 @@ type Source s = State (SourceState s)
 
 evalUniques :: Source String a -> a
 evalUniques = flip evalState (SourceState [] uniqNames)
-
-
--- newtype Source s a =
---   Source { runSource :: [s] -> Maybe (a, [s])
---          } deriving (Functor)
-
--- pop :: Source s s
--- pop = Source uncons where
---   uncons [] = Nothing
---   uncons (x:xs) = Just (x, xs)
-
--- instance Applicative (Source s) where
---   pure x = Source (\s -> Just (x, s))
---   Source f <*> Source x =
---     Source ((\(g,s) -> first g <$> x s) <=< f)
-
--- evalSource :: Source s a -> [s] -> Maybe a
--- evalSource s = fmap fst . runSource s

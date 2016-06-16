@@ -54,7 +54,7 @@ runSolver c = do
   let ostr = format fp opath
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
   out <- strict $ inproc ostr [] empty
-  pure $ eitherToMaybe (parseOut out)
+  pure $ either (const Nothing) Just (parseOut out)
 
 instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
   taylorDecls s = initials s  : derivs s where

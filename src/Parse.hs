@@ -100,21 +100,24 @@ odeTup (a,b) (c,d) = ODE a b c d
 
 -- | Parses an ode
 -- >>> parseTester ode "2 * x1 ^ 3"
--- Right (Just (Left 2.0),fromList [("x1", Left 3.0)],Nothing,fromList [])
+-- Right (Just (Left 2.0),fromList [("x1",Left 3.0)],Nothing,fromList [])
+-- >>> parseTester ode "-4.5 * x4 ^ 2"
+-- Right (Nothing,fromList [],Just (Left 4.5),fromList [("x4",Left 2.0)])
 ode :: (TokenParsing m, Monad m) => m ODE
-ode = odeTup <$> side
-             <*> (symbol "-" *> side <|> emptySide) where
-  term' = (,) <$> ident identStyle <*> defExp
-  defExp = (symbol "^" *> numLearn) <|> pure (Left 1)
-  side = (,) <$> fmap Just numLearn
-             <*> (Map.fromList <$> many (symbol "*" *> term'))
-             <|> ((,) Nothing . Map.fromList)
-             <$> sepBy term' (symbol "*")
-  emptySide = pure (Nothing, Map.empty)
+ode = odeTup <$> (poss <|> sidel) <*> (negs <|> sidel) where
+  facs = (,) <$> optional numLearn
+             <*  optional (symbol "*")
+             <*> termList
+  poss = notFollowedBy (symbol "-") *> facs
+  sidel = pure (Nothing, mempty)
+  negs = symbol "-" *> facs
+  termList = Map.fromList <$> sepBy term (symbol "*")
+  term = (,) <$> ident identStyle <*> ((symbol "^" *> numLearn) <|> pure (Left 1.0))
 
 parseOde :: (Monad m, TokenParsing m) => m (String, ODE)
 parseOde = (,) <$> (reserve identStyle "ddt" *> ident identStyle) <*> (symbol "=" *> ode)
 
+-- | Parses the declaration of the initial state of a variable
 parseInitialValue :: (Monad m, TokenParsing m) => m (String, Expr Double)
 parseInitialValue = (,) <$> ident identStyle <*> (symbol "=" *> exprParse)
 
@@ -151,7 +154,11 @@ toSSystem (ParseState o i) = do
   pure $ SSystem exps' trms
 
 parseLines :: (Monad m, TokenParsing m) => m [Either (String, ODE) (String, Expr Double)]
-parseLines = whiteSpace *> semiSep1 (eitherA parseOde parseInitialValue) <* eof
+parseLines =
+  whiteSpace *>
+  semiSep1 (eitherA parseOde parseInitialValue) <*
+  optional semi <*
+  eof
 
 parseSystem :: Text -> Either String (SSystem NumLearn)
 parseSystem s =

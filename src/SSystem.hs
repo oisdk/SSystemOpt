@@ -59,7 +59,7 @@ makeLenses ''SSystem
 instance Arbitrary a => Arbitrary (SSystem a) where
   arbitrary = sized $ \n ->
     SSystem <$> create n arbitrary
-            <*> replicateA n arbitrary
+            <*> replicateM n arbitrary
 
 instance Serialize a => Serialize (SSystem a)
 
