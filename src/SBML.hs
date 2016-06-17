@@ -10,7 +10,9 @@ import           Data.Functor
 import qualified Data.Set          as Set
 import           Data.String
 import           Data.Text.IO      (readFile)
+import           Data.Text.Lazy    (pack)
 import           Data.Text.Lazy.IO (writeFile)
+import qualified Data.Text.Lazy.IO as LText
 import           Numeric.Expr
 import           Parse
 import           Prelude           hiding (readFile, writeFile)
@@ -67,6 +69,15 @@ fromFile :: String -> String -> IO ()
 fromFile file out =
   either putStrLn (writeFile out . render . toSBML) .
   parseSystem =<< readFile file
+
+-- | For testing
+-- >>> cmpFiles m1 mo
+-- True
+cmpFiles :: String -> String -> IO Bool
+cmpFiles infile outfile = do
+  outcont <- LText.readFile outfile
+  (outcont ==) . either pack (render . toSBML) . parseSystem <$> readFile infile
+
 
 m1 :: String
 m1 = "ExampleModels/Model1/model.txt"

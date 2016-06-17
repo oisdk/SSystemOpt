@@ -66,7 +66,8 @@ listOf :: (Enum a, TokenParsing m, Monad m) => m a -> m [a]
 listOf parser =
   brackets (unenum =<< commaSep parser) where
     unenum [x] = symbol ".." *> fmap (enumFromTo x) parser <|> pure [x]
-    unenum [x,y] = symbol ".." *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
+    unenum [x,y] =
+      symbol ".." *> fmap (enumFromThenTo x y) parser <|> pure [x,y]
     unenum xs = pure xs
 
 -- | Parses the syntax for declaring a parameter.
@@ -113,10 +114,15 @@ ode = odeTup <$> (poss <|> sidel) <*> (negs <|> sidel) where
   sidel = pure (Nothing, mempty)
   negs = symbol "-" *> facs
   termList = Map.fromList <$> sepBy term (symbol "*")
-  term = (,) <$> ident identStyle <*> ((symbol "^" *> numLearn) <|> pure (Left 1.0))
+  term = (,) <$> ident identStyle
+             <*> ((symbol "^"
+              *> numLearn)
+             <|> pure (Left 1.0))
 
 parseOde :: (Monad m, TokenParsing m) => m (String, ODE)
-parseOde = (,) <$> (reserve identStyle "ddt" *> ident identStyle) <*> (symbol "=" *> ode)
+parseOde = (,) <$> (reserve identStyle "ddt"
+                *> ident identStyle)
+               <*> (symbol "=" *> ode)
 
 -- | Parses the declaration of the initial state of a variable
 parseInitialValue :: (Monad m, TokenParsing m) => m (String, Expr Double)
@@ -154,7 +160,8 @@ toSSystem (ParseState o i) = do
   (trms,exps') <- runStateT (fillSSystem m) s
   pure $ SSystem exps' trms
 
-parseLines :: (Monad m, TokenParsing m) => m [Either (String, ODE) (String, Expr Double)]
+parseLines :: (Monad m, TokenParsing m)
+           => m [Either (String, ODE) (String, Expr Double)]
 parseLines =
   whiteSpace *>
   semiSep1 (eitherA parseOde parseInitialValue) <*
