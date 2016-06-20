@@ -1,6 +1,6 @@
 from SloppyCell.ReactionNetworks import *
 expt = Experiment('expt1')
-data = {'net1':{
+expt.set_data({'net1':{
   'x0': {
     0.0: (2.0, 0.1),
     0.1: (2.0, 0.1),
@@ -97,4 +97,4 @@ data = {'net1':{
     0.8: (5.752e-3, 0.1),
     0.9: (6.471e-3, 0.1),
   },
-}}
+}})
