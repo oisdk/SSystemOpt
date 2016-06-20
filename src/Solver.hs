@@ -13,6 +13,7 @@ module Solver
 
 import           Control.Lens        hiding (strict)
 import           Control.Monad.State
+import           Data.Functor
 import           Data.Map.Strict     (Map)
 import           Data.Maybe
 import qualified Data.Sequence       as Seq
@@ -54,7 +55,7 @@ runSolver c = do
   let ostr = format fp opath
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
   out <- strict $ inproc ostr [] empty
-  pure $ either (const Nothing) Just (parseOut out)
+  either (const $ echo out $> Nothing) (pure . Just) (parseOut out)
 
 instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
   taylorDecls s = initials s  : derivs s where
@@ -100,12 +101,12 @@ instance TaylorCompat Simulation where
     , "relative_error_tolerance=" `append` repr rlt]
     ++ taylorDecls sy
 
-simOptions :: Parser (SSystem Double -> Simulation)
-simOptions = Simulation <$> optDouble "Start"  's' "Start time for simulation"
-                        <*> optDouble "Step"   'z' "Step size"
-                        <*> optInt    "Steps"  'n' "Number of steps"
-                        <*> optDouble "AbsTol" 'a' "Absolute tolerance"
-                        <*> optDouble "RelTol" 'r' "Relative tolerance"
+simOptions :: Parser (Double, Double, Int, Double, Double)
+simOptions = (,,,,) <$> optDouble "Start"  's' "Start time for simulation"
+                    <*> optDouble "Step"   'z' "Step size"
+                    <*> optInt    "Steps"  'n' "Number of steps"
+                    <*> optDouble "AbsTol" 'a' "Absolute tolerance"
+                    <*> optDouble "RelTol" 'r' "Relative tolerance"
 
 -- | Memoizes a function using the state transformer monad
 memo :: (Monad m, Ord a) => (a -> m b) -> a -> StateT (Map a b) m b

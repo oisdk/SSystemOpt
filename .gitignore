@@ -20,3 +20,5 @@ TAGS
 *.pickle
 
 *.pickle
+
+app/.#Configure.hs

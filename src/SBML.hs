@@ -20,6 +20,7 @@ import           Prelude           hiding (readFile, writeFile)
 import           SSystem
 import           Text.Taggy
 import           Utils
+import Data.Maybe
 
 toSBML :: (MathML a, Eq a, Floating a, Show a, Eq b) => SSystem (Either a b) -> Node
 toSBML s = evalUniques outr where
@@ -42,10 +43,10 @@ toSBML s = evalUniques outr where
   comps = elmt "listOfCompartments" [] [elmt "compartment" [("id", "main")] []]
   specs = elmt "listOfSpecies" [] <$> (s^.terms & each sp)
   rctns = elmt "listOfReactions" [] . zipWith rx (s^..terms.each.name) <$> eqns
-  rx n e = elmt "reaction" [("id", fromString $ "diff_" ++ n)]
-    [ elmt "listOfReactants" [] (map v . filter (`Set.member` vars) . map show . getVars $ e)
-    , elmt "listOfProducts" [] [elmt "speciesReference" [("species", fromString n)] []]
-    , elmt "kineticLaw" [] [elmt "math" [("xmlns", "http://www.w3.org/1998/Math/MathML")] [mlRep e]]]
+  rx n e = elmt "reaction" [("id", fromString $ "diff_" ++ n)] . catMaybes $
+    [ elmt "listOfReactants" [] <$> nilIfEmpty (map v . filter (`Set.member` vars) . map show . getVars $ e)
+    , elmt "listOfProducts" [] <$> nilIfEmpty [elmt "speciesReference" [("species", fromString n)] []]
+    , elmt "kineticLaw" [] <$> nilIfEmpty [elmt "math" [("xmlns", "http://www.w3.org/1998/Math/MathML")] [mlRep e]]]
   v e = elmt "speciesReference" [("species", fromString e)] []
   prams = do
     pnames <- use given
@@ -65,6 +66,8 @@ toSBML s = evalUniques outr where
     x <- use (source.streamHead)
     source %= view streamTail
     if Set.member x vars then pop' else (given %= (|> x)) $> x
+  nilIfEmpty :: Foldable f => f a -> Maybe (f a)
+  nilIfEmpty xs = foldr (\_ _ -> Just xs) Nothing xs
 
 fromFile :: String -> String -> IO ()
 fromFile file out =
@@ -89,15 +92,14 @@ mo = "ExampleModels/Model1/sbml.xml"
 data Experiment = Experiment
   { sigma :: Double
   , networkName :: Text.Text
+  , step :: Double
   , results :: [VariableHistory]}
 
 data VariableHistory = VariableHistory
   { variableName :: Text.Text
   , measurements :: [VariableMeasurement] }
 
-data VariableMeasurement = VariableMeasurement
-  { variableTime :: Double
-  , measuredValue :: Double }
+type VariableMeasurement = Double
 
 -- | Converts an experiment to the required python file
 -- format.
@@ -120,7 +122,7 @@ data VariableMeasurement = VariableMeasurement
 
 toExpFormat :: Experiment
             -> Text.Text
-toExpFormat (Experiment s n r) = Text.unlines $
+toExpFormat (Experiment s n st r) = Text.unlines $
   [ "from SloppyCell.ReactionNetworks import *"
   , "expt = Experiment('expt1')"
   , Text.concat ["data = {'", n, "':{"]] ++
@@ -130,15 +132,15 @@ toExpFormat (Experiment s n r) = Text.unlines $
     f (VariableHistory vn ms) =
       Text.concat ["  '", vn, "': {"] :
       [ Text.concat ["    ", repr vt, ": (", repr mv, ", ", repr s, "),"]
-      | VariableMeasurement vt mv <- ms] ++
+      | (mv, vt) <- zip ms [0, 0+st..]] ++
       ["  },"]
     repr = Text.pack . show
 
 exampleNet :: Experiment
-exampleNet = Experiment 0.1 "net1"
-  [ VariableHistory "x" [ VariableMeasurement 0 0
-                        , VariableMeasurement 1 1
-                        , VariableMeasurement 2 2]
-  , VariableHistory "y" [ VariableMeasurement 0 0
-                        , VariableMeasurement 1 1
-                        , VariableMeasurement 2 2]]
+exampleNet = Experiment 0.1 "net1" 1
+  [ VariableHistory "x" [ 0
+                        , 1
+                        , 2]
+  , VariableHistory "y" [ 0
+                        , 1
+                        , 2]]
