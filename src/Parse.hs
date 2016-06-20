@@ -5,14 +5,15 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
+
 module Parse
-       ( parseSystem
-       , parseTester
-       , numLearn
-       , ode
-       , listOf
-       , double'
-       ) where
+  ( parseSystem
+  , parseTester
+  , numLearn
+  , ode
+  , listOf
+  , double'
+  ) where
 
 
 import           Control.Applicative
@@ -47,8 +48,7 @@ instance Show ODE where show (ODE a b c d) = show (a,b,c,d)
 
 data ParseState =
   ParseState { _odes     :: Map String ODE
-             , _initials :: Map String (Expr Double)
-             }
+             , _initials :: Map String (Expr Double) }
 
 makeLenses ''ParseState
 

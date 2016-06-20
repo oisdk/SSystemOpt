@@ -9,6 +9,7 @@ import           Control.Lens
 import           Data.Functor
 import qualified Data.Set          as Set
 import           Data.String
+import qualified Data.Text as Text
 import           Data.Text.IO      (readFile)
 import           Data.Text.Lazy    (pack)
 import           Data.Text.Lazy.IO (writeFile)
@@ -84,3 +85,60 @@ m1 = "ExampleModels/Model1/model.txt"
 
 mo :: String
 mo = "ExampleModels/Model1/sbml.xml"
+
+data Experiment = Experiment
+  { sigma :: Double
+  , networkName :: Text.Text
+  , results :: [VariableHistory]}
+
+data VariableHistory = VariableHistory
+  { variableName :: Text.Text
+  , measurements :: [VariableMeasurement] }
+
+data VariableMeasurement = VariableMeasurement
+  { variableTime :: Double
+  , measuredValue :: Double }
+
+-- | Converts an experiment to the required python file
+-- format.
+-- >>> putStr . Text.unpack $ toExpFormat exampleNet
+-- from SloppyCell.ReactionNetworks import *
+-- expt = Experiment('expt1')
+-- data = {'net1':{
+--   'x': {
+--     0.0: (0.0, 0.1),
+--     1.0: (1.0, 0.1),
+--     2.0: (2.0, 0.1),
+--   },
+--   'y': {
+--     0.0: (0.0, 0.1),
+--     1.0: (1.0, 0.1),
+--     2.0: (2.0, 0.1),
+--   },
+-- }}
+-- expt.set_data(data)
+
+toExpFormat :: Experiment
+            -> Text.Text
+toExpFormat (Experiment s n r) = Text.unlines $
+  [ "from SloppyCell.ReactionNetworks import *"
+  , "expt = Experiment('expt1')"
+  , Text.concat ["data = {'", n, "':{"]] ++
+  (f =<< r) ++
+  ["}}", "expt.set_data(data)"]
+  where
+    f (VariableHistory vn ms) =
+      Text.concat ["  '", vn, "': {"] :
+      [ Text.concat ["    ", repr vt, ": (", repr mv, ", ", repr s, "),"]
+      | VariableMeasurement vt mv <- ms] ++
+      ["  },"]
+    repr = Text.pack . show
+
+exampleNet :: Experiment
+exampleNet = Experiment 0.1 "net1"
+  [ VariableHistory "x" [ VariableMeasurement 0 0
+                        , VariableMeasurement 1 1
+                        , VariableMeasurement 2 2]
+  , VariableHistory "y" [ VariableMeasurement 0 0
+                        , VariableMeasurement 1 1
+                        , VariableMeasurement 2 2]]
