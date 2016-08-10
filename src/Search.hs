@@ -11,7 +11,7 @@ import           Data.Foldable
 import           Data.Function       (on)
 import           Data.List           (sortOn)
 import qualified Data.Map            as Map
-import           Utils
+import           Utils               hiding (zipWith)
 
 
 -- eachNext :: Int -> a -> a -> [[a]]

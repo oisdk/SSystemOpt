@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -17,16 +18,18 @@ import           Data.Functor
 import           Data.Map.Strict     (Map)
 import           Data.Maybe
 import qualified Data.Sequence       as Seq
-import           Data.Text           (append, concat, intercalate, pack)
+import           Data.Text           (append, intercalate)
 import qualified Data.Text           as Text
 import           Data.Text.Read      (double)
+import           GHC.Exts
+import           Numeric.Expr
 import           Prelude             hiding (FilePath, concat)
 import           SSystem
 import           Turtle              (Parser, Shell, Text, echo, empty, format,
                                       fp, inproc, mktempdir, mktempfile,
                                       optDouble, optInt, output, procs, repr,
                                       strict, using)
-import           Utils
+import           Utils               hiding (zipWith)
 -- | A typeclass for types with a representation in Taylor source code
 class TaylorCompat a where taylorDecls :: a -> [Text]
 
@@ -57,30 +60,12 @@ runSolver c = do
   out <- strict $ inproc ostr [] empty
   either (const $ echo out $> Nothing) (pure . Just) (parseOut out)
 
-instance (Num a, Eq a, Show a) => TaylorCompat (SSystem a) where
-  taylorDecls s = initials s  : derivs s where
-    initials (SSystem _ t) =
-      "initial_values=" `append` intercalate ", " (repr._initial <$> t)
-    derivs (SSystem sq t) = imap f (zip (foldr (:) [] uniqNames) t) where
-      f i (c, STerm post negt _ _) =
-        concat ["diff(", pack c, ", t) = ", showOde post negt] where
-          showOde 0 0 = "0"
-          showOde 0 n = " - " `append` showSide n (side _2)
-          showOde n 0 = showSide n (side _1)
-          showOde n m = concat [showSide n (side _1), " - ", showSide m (side _2)]
-          showSide 1 [] = "1"
-          showSide 1 xs = intercalate " * " xs
-          showSide n l = repr n `append` prepToAll " * " l
-          side l = catMaybes $ zipWith expshow (foldr (:) [] uniqNames) (evals l)
-          evals l = [ sq ^?! ix i . ix j . l | j <- [0..(Seq.length sq - 1)]]
-          expshow _ 0 = Nothing
-          expshow n 1 = Just $ pack n
-          expshow n e = Just $ concat [pack n, " ^ ", repr e]
-
-prepToAll :: Text -> [Text] -> Text
-prepToAll _ [] = ""
-prepToAll y (x:xs) = intercalate y (append y x : xs)
-
+instance (Floating a, Eq a, Show a) => TaylorCompat (SSystem a) where
+  taylorDecls s = inits : map repr derivs where
+    inits = "initial_values=" `append` intercalate ", " (s^..initials.each.to repr)
+    derivs :: [VarExpr a]
+    derivs = foldr (:) [] $ toEqns (Var . fromString . Seq.index varNames) (fmap Lit s)
+    varNames = Seq.fromList (takeStream (size s) uniqNames)
 
 -- | The full information needed to run a Taylor simulation
 data Simulation =
@@ -134,8 +119,8 @@ runMemo :: (Monoid m, Monad f)
         => StateT m f a -> f a
 runMemo = flip evalStateT mempty
 
-withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem Double)
+withParams :: SSystem NumLearn -> [Double] -> Either String (SSystem (VarExpr Double))
 withParams s =
     evalStateT (traverse (either pure (const pop')) s) where
-      pop' = StateT (maybe err Right . uncons)
+      pop' = Lit <$> StateT (maybe err Right . uncons)
       err = Left "Mismatched params"

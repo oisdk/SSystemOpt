@@ -1,9 +1,9 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
 
 module Parse
@@ -13,20 +13,23 @@ module Parse
   , ode
   , listOf
   , double'
+  , declarations
+  , fromParsed
+  , parseSystemFromFile
   ) where
 
 
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad
-import           Control.Monad.State
+import           Control.Monad.Writer
+import           Data.Either
+import           Data.Functor
 import           Data.List
 import           Data.Map.Strict             (Map)
 import qualified Data.Map.Strict             as Map
 import           Data.Maybe
-import           Data.Sequence               (Seq)
 import qualified Data.Sequence               as Seq
-import           Data.Text                   (Text, unpack)
 import           Numeric.Expr
 import           Prelude                     hiding (unlines)
 import           SSystem
@@ -38,22 +41,6 @@ import           Text.Trifecta.Parser
 import           Text.Trifecta.Result
 import           Utils
 
-data ODE =
-  ODE { _posFac :: Maybe NumLearn
-      , _posExp :: Map String NumLearn
-      , _negFac :: Maybe NumLearn
-      , _negExp :: Map String NumLearn}
-
-instance Show ODE where show (ODE a b c d) = show (a,b,c,d)
-
-data ParseState =
-  ParseState { _odes     :: Map String ODE
-             , _initials :: Map String (Expr Double) }
-
-makeLenses ''ParseState
-
-beginState :: ParseState
-beginState = ParseState Map.empty Map.empty
 
 -- | Parses a list of values, haskell-style
 --
@@ -75,7 +62,7 @@ listOf parser =
 -- >>> parseTester numLearn "[1,2,3]"
 -- Right (Right [1.0,2.0,3.0])
 numLearn :: (TokenParsing m, Monad m) => m NumLearn
-numLearn = eitherA double' (listOf double')
+numLearn = eitherA (Lit <$> double') (listOf double')
 
 -- | Parses both doubles and integers, converting them both
 -- >>> parseTester double' "23"
@@ -95,16 +82,23 @@ identStyle =
     Identifier
     ReservedIdentifier
 
-odeTup :: (Maybe NumLearn, Map String NumLearn)
-       -> (Maybe NumLearn, Map String NumLearn)
-       -> ODE
-odeTup (a,b) (c,d) = ODE a b c d
+data ODE =
+  ODE { _posFac :: Maybe NumLearn
+      , _posExp :: Map String NumLearn
+      , _negFac :: Maybe NumLearn
+      , _negExp :: Map String NumLearn }
+
+instance Show ODE where
+  show (ODE w x y z) = showFac w ++ showMul x ++ " - " ++ showFac y ++ showMul z where
+    showFac = maybe "" ((++ " * ") . showNL)
+    showMul m = intercalate " * " [ var ++ " ^ " ++ showNL ex | (var,ex) <- Map.assocs m  ]
+    showNL = either show show
 
 -- | Parses an ode
 -- >>> parseTester ode "2 * x1 ^ 3"
--- Right (Just (Left 2.0),fromList [("x1",Left 3.0)],Nothing,fromList [])
+-- Right 2.0 * x1 ^ 3.0 -
 -- >>> parseTester ode "-4.5 * x4 ^ 2"
--- Right (Nothing,fromList [],Just (Left 4.5),fromList [("x4",Left 2.0)])
+-- Right  - 4.5 * x4 ^ 2.0
 ode :: (TokenParsing m, Monad m) => m ODE
 ode = odeTup <$> (poss <|> sidel) <*> (negs <|> sidel) where
   facs = (,) <$> optional numLearn
@@ -118,72 +112,80 @@ ode = odeTup <$> (poss <|> sidel) <*> (negs <|> sidel) where
              <*> ((symbol "^"
               *> numLearn)
              <|> pure (Left 1.0))
+  odeTup (w,x) (y,z) = ODE w x y z
 
-parseOde :: (Monad m, TokenParsing m) => m (String, ODE)
-parseOde = (,) <$> (reserve identStyle "ddt"
-                *> ident identStyle)
-               <*> (symbol "=" *> ode)
+odeDecl :: (Monad m, TokenParsing m) => m (String, ODE)
+odeDecl = (,) <$> (reserve identStyle "ddt"
+               *> ident identStyle)
+              <*> (symbol "=" *> ode)
 
 -- | Parses the declaration of the initial state of a variable
-parseInitialValue :: (Monad m, TokenParsing m) => m (String, Expr Double)
-parseInitialValue = (,) <$> ident identStyle <*> (symbol "=" *> exprParse)
+initialValue :: (Monad m, TokenParsing m) => m (String, VarExpr Double)
+initialValue = (,) <$> ident identStyle <*> (symbol "=" *> exprParse)
 
-type FillState a = StateT (Seq (Seq (NumLearn,NumLearn))) (Either String) a
-
-fillSSystem :: Map String (ODE, Expr Double) -> FillState [STerm NumLearn]
-fillSSystem m = itraverse fill vals where
-  vals = Map.toList m
-  idxs = Map.fromList (imap (\i (n,_) -> (n,i)) vals)
-  fill i (n, (ODE pf_ pe_ nf_ ne_, e)) = do
-    updSquare pe_ i _1
-    updSquare ne_ i _2
-    let pf = fromMaybe (Left $ bool 0 1 (Map.null pe_)) pf_
-    let nf = fromMaybe (Left $ bool 0 1 (Map.null ne_)) nf_
-    iv <- lift . maybe (Left "Divide by zero") Right $ safeEval e
-    pure $ STerm pf nf (Left iv) n
-  updSquare :: Map String NumLearn
-            -> Int
-            -> Lens' (NumLearn,NumLearn) NumLearn
-            -> FillState ()
-  updSquare p i s = forM_ (Map.toList p) $ \(en,ev) -> do
-      j <- maybe (lift . Left . err' $ en) pure (Map.lookup en idxs)
-      ix i . ix j . s .= ev
-  err' :: String -> String
-  err' en = "Variable without ode: " ++ en
-
-toSSystem :: ParseState -> Either String (SSystem NumLearn)
-toSSystem (ParseState o i) = do
-  let err' xs = "Equations not matched: " ++ show xs
-  m <- over _Left err' $ mergeMatch (,) o i
-  let n = Map.size m
-  let s = Seq.replicate n (Seq.replicate n (Left 0, Left 0))
-  (trms,exps') <- runStateT (fillSSystem m) s
-  pure $ SSystem exps' trms
-
-parseLines :: (Monad m, TokenParsing m)
-           => m [Either (String, ODE) (String, Expr Double)]
-parseLines =
+declarations :: (Monad m, TokenParsing m)
+           => m [Either (String, ODE) (String, VarExpr Double)]
+declarations =
   whiteSpace *>
-  semiSep1 (eitherA parseOde parseInitialValue) <*
+  semiSep1 (eitherA odeDecl initialValue) <*
   optional semi <*
   eof
 
-parseSystem :: Text -> Either String (SSystem NumLearn)
-parseSystem s =
-  toSSystem =<<
-  flip execStateT beginState .
-  traverse (either (upd odes) (upd initials)) =<<
-  case parseString parseLines mempty (unpack s) of
+matchEqns :: [Either (String, ODE) (String, VarExpr Double)]
+          -> Either String (Map String (ODE, VarExpr Double))
+matchEqns xs = join $ getMatched <$> cOdes <*> cInits where
+  unComma :: [String] -> String
+  unComma = intercalate ", "
+  catchDupes msg =
+    over _Left (\ds -> msg ++ unComma ds) . insertUniques
+  cOdes = catchDupes "Duplicate odes for " (lefts xs)
+  cInits = catchDupes "Duplicate initial values for " (rights xs)
+  getMatched ys zs =
+    over _Left (\ds -> "Unmatched equations for " ++ unComma ds) mm
+    where mm = mergeMatch (,) ys zs
+
+indexEqns :: Map String (ODE, VarExpr Double)
+          -> ([(ODE, VarExpr Double)], Map String Int)
+indexEqns = runWriter . itraverse f . Map.assocs where
+  f i (n,e) = tell (Map.singleton n i) $> e
+
+toSSystem :: ([(ODE, VarExpr Double)], Map String Int)
+          -> Either String (SSystem NumLearn)
+toSSystem (xs,m) =
+  SSystem <$> fmap Seq.fromList (traverse (getOdes.fst) xs)
+          <*> getInits xs where
+    getInits = Right . Seq.fromList . map (Left . snd)
+    getOdes (ODE pf pe nf ne) =
+      SRow (getConstN pf pe)
+           (getConstN nf ne) <$>
+           (expList <$> checkMap pe) <*>
+           (expList <$> checkMap ne)
+    getConstN (Just x) _ = x
+    getConstN Nothing fs
+      | Map.null fs = Left 0
+      | otherwise = Left 1
+    checkMap e = (mapM_ f . Map.keys) e $> e where
+      f n = case Map.lookup n m of
+        Nothing -> Left $ "Unrecognised name: " ++ n
+        Just _ -> pure ()
+    inOrder = (map fst . sortOn snd . Map.assocs) m
+    expList e =
+      Seq.fromList $ map (flip (Map.findWithDefault (Left 0)) e) inOrder
+
+fromParsed :: [Either (String, ODE) (String, VarExpr Double)]
+           -> Either String (SSystem NumLearn)
+fromParsed xs = (toSSystem . indexEqns) =<< matchEqns xs
+
+parseSystem :: String -> Either String (SSystem NumLearn)
+parseSystem s = case parseString declarations mempty s of
+  Failure f -> Left (show f)
+  Success xs -> fromParsed xs
+
+parseSystemFromFile :: String -> IO (Either String (SSystem NumLearn))
+parseSystemFromFile f =
+  parseFromFileEx declarations f <&> \case
     Failure d -> Left (show d)
-    Success x -> Right x
-  where
-      upd :: Lens' ParseState (Map String a)
-          -> (String, a)
-          -> StateT ParseState (Either String) ()
-      upd l (n,v) = do
-        seen <- uses (l . at n) isJust
-        when seen . lift . Left $ "Duplicate equations for " ++ n
-        l . at n ?= v
+    Success x -> fromParsed x
 
 parseTester :: Parser a -> String -> Either String a
 parseTester p s = case parseString (whiteSpace *> p <* eof) mempty s of

@@ -2,63 +2,71 @@
 
 module Main where
 
-import           Control.Applicative
 import           Control.Monad
 import           Data.Functor
-import           Data.List                (sort)
-import           Data.Serialize           (Serialize, decode, encode)
+import qualified Data.Text.Lazy.IO    as T
+import           Experiments
 import           Parse
-import           SSystem
+import           SBML
 import           System.Exit
 import           Test.DocTest
-import           Test.QuickCheck          hiding (listOf)
-import qualified Test.QuickCheck.Property as P
+import           Test.QuickCheck      hiding (listOf)
+import           Text.Taggy.DOM
+import           Text.Trifecta.Parser
 
-prop_BinSSystem :: SSystem Int -> P.Result
-prop_BinSSystem = checkSerialize
+headMay :: [a] -> Maybe a
+headMay [] = Nothing
+headMay (x:_) = Just x
 
-singleList :: NonEmptyList Double -> Bool
-singleList (NonEmpty x) = Right x == parseTester (listOf double') (show x)
+prop_parseList :: OrderedList Double -> Property
+prop_parseList (Ordered xs) = case xs of
+  (x1:x2:x3:_) -> check3 x1 x2 x3 .&. check2 x1 x2 .&. check1 x1 .&. checkNil
+  (x1:x2:_) -> check2 x1 x2 .&. check1 x1 .&. checkNil
+  (x1:_) -> check1 x1 .&. checkNil
+  [] -> checkNil
+  where
+    check3 x y z = Right [x,y..z] === parseTester (listOf double') (showThree x y z)
+    check2 x y = Right [x..y] === parseTester (listOf double') (showTwo x y)
+    check1 x = Right [x] === parseTester (listOf double') (showOne x)
+    showThree x y z = concat ["[", show x, ", ", show y, "..", show z, "]"]
+    showTwo x y = "[" ++ show x ++ ".." ++ show y ++ "]"
+    showOne x = "[" ++ show x ++ "]"
+    checkNil = Right [] === parseTester (listOf double') "[]"
 
-doubleList :: Double -> Double -> Bool
-doubleList x y = Right [a..b] == parseTester (listOf double') (list2 a b) where
-  [a,b] = sort [x,y]
-  list2 x y = "[" ++ show x ++ ".." ++ show y ++ "]"
+sbmlFile :: String
+         -> String
+         -> IO ()
+sbmlFile inFile outFile = do
+  ss <- parseSystemFromFile inFile >>= toFail
+  xf <- T.readFile outFile
+  sb <- (toFail . maybe (Left "No xml parse") Right . headMay . parseDOM False) xf
+  single ("Code in " ++ inFile ++ " doesn't generate SBML in " ++ outFile) (toSBML ss == sb)
 
-tripleList :: Double -> Double -> Double -> Bool
-tripleList x y z =  Right [a,b..c] == parseTester (listOf double') (list3 a b c) where
-  [a,b,c] = sort [x,y,z]
-  list3 x y z = concat ["[", show x, ",", show y, "..", show z, "]"]
+odeFile :: String
+        -> String
+        -> IO ()
+odeFile inFile outFile = do
+  (_,e) <- maybe exitFailure pure =<< parseFromFile problem inFile
+  ef <- T.readFile outFile
+  single ("Problem in " ++ inFile ++ " doesn't generate Python in" ++ outFile) (toExpFormat e == ef)
 
--- checkParse :: Parser a -> (a -> String) -> (a -> String) -> (a -> a -> Bool) -> a -> P.Result
--- checkParse p d s e x = either fw eq (parseTester p (s x)) where
---   eq y | e x y = P.succeeded
---        | otherwise = fw (concat ["Got     : ", d y, "\n", "Expected: ", d x])
---   fw m = failWith $ m ++ "\nWith    : " ++ s x
+toFail :: Either String a -> IO a
+toFail = either (\e -> single e False *> exitFailure) pure
 
-sameResult :: Eq a => (b -> a) -> (b -> a) -> b -> Bool
-sameResult = liftA2 (==)
-
-sameResult2 :: Eq a => (c -> b -> a) -> (c -> b -> a) -> c -> b -> Bool
-sameResult2 = liftA2 sameResult
-
-isId :: Eq a => (a -> a) -> a -> Bool
-isId = sameResult id
-
-checkSerialize :: (Eq a, Serialize a) => a -> P.Result
-checkSerialize a = either failWith (\x -> if x == a then P.succeeded else P.failed) . decode . encode $ a
+single :: String -> Bool -> IO ()
+single e = void . quickCheckExit . once . counterexample e . property
 
 quickCheckExit :: Testable prop => prop -> IO Result
 quickCheckExit = resultExit <=< quickCheckResult where
   resultExit r@ Success{}  = pure r
   resultExit r = exitFailure $> r
 
-failWith :: String -> P.Result
-failWith r = P.failed { P.reason = r }
-
 return []
+
+runTests :: IO Bool
 runTests = $forAllProperties quickCheckExit
 
+main :: IO Bool
 main = do
   doctest
     [ "-isrc"
@@ -68,5 +76,8 @@ main = do
     , "src/Solver.hs"
     , "src/SSystem.hs"
     , "src/Utils.hs"
+    , "src/Experiments.hs"
     , "app/Configure.hs"]
+  sbmlFile "ExampleModels/Model1/model.txt" "ExampleModels/Model1/sbml.xml"
+  odeFile "ExampleModels/ss_cascade/experiment.txt" "ExampleModels/ss_cascade/result.txt"
   runTests

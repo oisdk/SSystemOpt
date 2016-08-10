@@ -11,11 +11,14 @@ module Utils where
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad.State
+import           Control.Monad.Writer
 import           Data.Foldable
-import           Data.Map.Strict     (Map)
-import qualified Data.Map.Strict     as Map
-import           Data.Text           (pack)
-import           Turtle              (Shell, die)
+import           Data.Functor
+import           Data.Map.Strict      (Map)
+import qualified Data.Map.Strict      as Map
+import           Data.Text            (pack)
+import           Numeric.Expr
+import           Turtle               (Shell, die)
 
 -- | Inserts a value into a map, only if it's not already present
 -- >>> insertUnique "a" "b" (Map.fromList [])
@@ -26,6 +29,14 @@ insertUnique :: Ord k => k -> a -> Map k a -> Either k (Map k a)
 insertUnique key val m = case Map.insertLookupWithKey (\_ n _ -> n) key val m of
   (Just _,_) -> Left key
   (Nothing,n) -> Right n
+
+insertUniques :: (Ord k, Foldable f) => f (k, a) -> Either [k] (Map k a)
+insertUniques = toEither . runWriter . foldrM f mempty where
+  f (k,v) a = case insertUnique k v a of
+    Left d -> tell [d] $> a
+    Right m -> pure m
+  toEither (m,[]) = Right m
+  toEither (_,ds) = Left ds
 
 -- | Sorts a list of tuples, returning left if any keys
 -- are repeated
@@ -45,9 +56,9 @@ mergeMatch f x y = case Map.keys (symmetricDifference x y) of
   [] -> Right (Map.intersectionWith f x y)
   xs -> Left xs
 
-bool :: a -> a -> Bool -> a
-bool t _ True  = t
-bool _ f False = f
+-- bool :: a -> a -> Bool -> a
+-- bool t _ True  = t
+-- bool _ f False = f
 
 uniqNames :: Stream String
 uniqNames = foldr Stream undefined un' where
@@ -93,8 +104,7 @@ instance Cons (Stream a) (Stream b) a b where
 
 data SourceState s = SourceState
   { _given  :: [s]
-  , _source :: Stream s
-  } deriving (Functor, Foldable, Traversable)
+  , _source :: Stream s }
 
 makeLenses ''SourceState
 
@@ -102,10 +112,34 @@ pop :: MonadState (SourceState s) m => m s
 pop = do
   x <- use (source.streamHead)
   source %= view streamTail
-  given %= (|> x)
+  given %= (x:)
   pure x
 
 type Source s = State (SourceState s)
 
 evalUniques :: Source String a -> a
-evalUniques = flip evalState (SourceState [] uniqNames)
+evalUniques = flip evalState (SourceState mempty uniqNames)
+
+takeStream :: Int -> Stream a -> [a]
+takeStream 0 _ = []
+takeStream n (Stream x xs) = x : takeStream (n-1) xs
+
+dropStream :: Int -> Stream a -> Stream a
+dropStream 0 s = s
+dropStream n (Stream _ xs) = dropStream (n-1) xs
+
+newtype RecFold a b = RecFold { runRecFold :: a -> (RecFold a b -> b) -> b }
+
+foldr2 :: (Foldable f, Foldable g) => (a -> b -> c -> c) -> c -> f a -> g b -> c
+foldr2 c i xs = foldr f (const i) xs . RecFold . foldr g (\_ _ -> i) where
+  g e2 r2 e1 r1 = c e1 e2 (r1 (RecFold r2))
+  f e r x = runRecFold x e r
+
+zipWith :: (Foldable f, Foldable g) => (a -> b -> c) -> f a -> g b -> [c]
+zipWith f = foldr2 (\a b c -> f a b : c) []
+
+zipWithA :: (Foldable f, Foldable g, Applicative m) => (a -> b -> m c) -> f a -> g b -> m [c]
+zipWithA f = foldr2 (\x y z -> (:) <$> f x y <*> z) (pure [])
+
+type NumLearn = Either (VarExpr Double) [Double]
+

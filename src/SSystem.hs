@@ -1,103 +1,64 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DeriveFoldable             #-}
+{-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveTraversable          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module SSystem where
 
-import           Control.Arrow
 import           Control.Lens
-import           Control.Monad.Reader
-import           Data.Sequence        (Seq, replicateA)
-import qualified Data.Sequence        as Seq
-import           Data.Serialize
-import           GHC.Exts
-import           GHC.Generics         (Generic)
-import           Numeric.Expr
+import           Data.Foldable
+import           Data.Sequence   (Seq)
+import qualified Data.Sequence   as Seq
+import           GHC.Generics    (Generic)
 import           Test.QuickCheck
-import           Utils
 
-data STerm a =
-  STerm { _pos     :: a
-        , _neg     :: a
-        , _initial :: a
-        , _name    :: String
-        } deriving (Functor, Foldable, Traversable
-                   ,Generic, Show, Eq , Ord)
+data SRow a = SRow
+  { _posFac :: a
+  , _negFac :: a
+  , _posExp :: Seq a
+  , _negExp :: Seq a
+  } deriving (Functor, Foldable, Traversable, Generic, Show, Eq, Ord)
 
-makeLenses ''STerm
+makeLenses ''SRow
 
-data SEqn a = SEqn
-  { _forVar   :: String
-  , _posFac   :: a
-  , _posTerms :: [(String, a)]
-  , _negFac   :: a
-  , _negTerms :: [(String, a)]}
-
-
-instance Arbitrary a => Arbitrary (STerm a) where
-  arbitrary = STerm <$> arbitrary
-                    <*> arbitrary
-                    <*> arbitrary
-                    <*> arbitrary
-
-instance Serialize a => Serialize (STerm a)
-
-data SSystem a =
-  SSystem { _exponents :: Seq (Seq (a,a))
-          , _terms     :: [STerm a]
-          } deriving (Functor, Foldable, Generic, Show, Eq, Ord
-                     , Traversable)
+data SSystem a = SSystem
+  { _odes     :: Seq (SRow a)
+  , _initials :: Seq a
+  } deriving (Functor, Foldable, Traversable, Generic, Show, Eq, Ord)
 
 makeLenses ''SSystem
 
+toEqns :: (Floating a, Eq a) => (Int -> a) -> SSystem a -> Seq a
+toEqns toNum (SSystem s _) = fmap f s where
+  f (SRow pf nf pe ne) = toEqn pf pe `subS` toEqn nf ne where
+    toEqn facs exps = foldl' mulS facs (imap (powS.toNum) exps)
+    powS _ 0 = 1
+    powS 1 _ = 1
+    powS x 1 = x
+    powS x y = x ** y
+    mulS 0 _ = 0
+    mulS _ 0 = 0
+    mulS 1 x = x
+    mulS x 1 = x
+    mulS x y = x * y
+    subS x 0 = x
+    subS 0 x = -x
+    subS x y = x - y
 
 instance Arbitrary a => Arbitrary (SSystem a) where
-  arbitrary = sized $ \n ->
-    SSystem <$> replicateA n (replicateA n arbitrary)
-            <*> replicateM n arbitrary
+  arbitrary = sized sgen where
+    sgen n = SSystem <$> seqOf rowGen <*> seqOf arbitrary where
+      rowGen =
+        SRow <$> arbitrary
+             <*> arbitrary
+             <*> seqOf arbitrary
+             <*> seqOf arbitrary
+      seqOf :: forall f a. Applicative f => f a -> f (Seq a)
+      seqOf = Seq.replicateA n
 
-instance Serialize a => Serialize (SSystem a)
-
-type NumLearn = Either Double [Double]
-
-data SSystemState a = SSystemState
-  { _variables :: [String]
-  , _square    :: Seq (Seq (a,a)) }
-
-makeLenses ''SSystemState
-
-toEqns :: (ExprType a, VarType a ~ 'HasVar s
-          , IsString s, Eq a, Floating a, Show s)
-       => SSystem a -> [a]
-toEqns (SSystem q t) = runReader (itraverse f t) (SSystemState (t^..traversed.name) q) where
-  size = Seq.length q - 1
-  inds = [0..size]
-  f l (STerm p n _ _) = do
-    bind <- traverse (\y -> preview (square . ix l . ix y)) inds
-    exps' <- views variables (zip (bind^..traversed._Just))
-    let lhs = foldr (combine _1) p exps'
-    let rhs = foldr (combine _2) n exps'
-    pure (subS lhs rhs)
-  combine side =
-    mulS . uncurry (flip powS) . (view side *** (Var . fromString))
-  powS _ 0 = 1
-  powS 1 _ = 1
-  powS x 1 = x
-  powS x y = x ** y
-  mulS 0 _ = 0
-  mulS _ 0 = 0
-  mulS 1 x = x
-  mulS x 1 = x
-  mulS x y = x * y
-  subS x 0 = x
-  subS 0 x = -x
-  subS x y = x - y
-
-toEqVars :: (Eq a, Floating a) => SSystem (Either a b) -> Source String [VarExpr a]
-toEqVars = fmap toEqns . traverse (either (pure . Lit) (const $ fmap (Var . fromString) pop))
+size :: SSystem a -> Int
+size (SSystem rws _) = Seq.length rws
