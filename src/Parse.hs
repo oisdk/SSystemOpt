@@ -164,7 +164,7 @@ toSSystem (xs,m) =
     getConstN Nothing fs
       | Map.null fs = Left 0
       | otherwise = Left 1
-    checkMap e = (mapM_ f . Map.keys) e $> e where
+    checkMap e = e <$ (mapM_ f . Map.keys) e where
       f n = case Map.lookup n m of
         Nothing -> Left $ "Unrecognised name: " ++ n
         Just _ -> pure ()

@@ -128,20 +128,17 @@ data Dependency = Input | Dependent deriving Show
 makeFields ''Variable
 
 dependency :: ExperimentParser Dependency
-dependency = reserved "dependent" $> Dependent
-         <|> reserved "inputVariable" $> Input
+dependency = Dependent <$ reserved "dependent"
+         <|> Input     <$ reserved "inputVariable"
 
 -- |
 -- >>> parseTest (getExprParser varDecl) "variable_2 has name = x2 is dependent"
 -- Variable {_variableNum = 2, _variableName = "x2", _variableDep = Dependent}
 varDecl :: ExperimentParser Variable
 varDecl =
-  Variable <$> (string "variable_" *>
-                posInt)
-           <*> (prop "name" *>
-                identifier)
-           <*> (reserved "is" *>
-                dependency)
+  Variable <$> (string "variable_" *> posInt)
+           <*> (prop "name" *> identifier)
+           <*> (reserved "is" *> dependency)
 
 data ExprDecl = ExprDecl
   { _exprDeclNum    :: Int
@@ -154,20 +151,17 @@ data DataVal = Perfect | Imperfect deriving Show
 makeFields ''ExprDecl
 
 dataVal :: ExperimentParser DataVal
-dataVal = reserved "perfectData" $> Perfect
-      <|> reserved "imperfectData" $> Imperfect
+dataVal = Perfect   <$ reserved "perfectData"
+      <|> Imperfect <$ reserved "imperfectData"
 
 -- |
 -- >>> parseTest (getExprParser exprDecl) "experiment_1 has name = exp1 has perfectData"
 -- ExprDecl {_exprDeclNum = 1, _exprDeclName = "exp1", _exprDeclDatVal = Perfect}
 exprDecl :: ExperimentParser ExprDecl
 exprDecl =
-  ExprDecl <$> (string "experiment_" *>
-                posInt)
-           <*> (prop "name" *>
-                identifier)
-           <*> (reserved "has" *>
-                dataVal)
+  ExprDecl <$> (string "experiment_" *> posInt)
+           <*> (prop "name" *> identifier)
+           <*> (reserved "has" *> dataVal)
 
 -- |
 -- >>> parseTest (getExprParser bound) "0."
@@ -236,7 +230,7 @@ getBound :: String -> String
          -> ExperimentParser (FilledBound -> Either String FilledBound)
 getBound lb ub =
   (reserved "has" *>
-  ((reserved lb $> addLower) <|> (reserved ub $> addUpper))) <*>
+  ((addLower <$ reserved lb) <|> (addUpper <$ reserved ub))) <*>
   (reserved "=" *> bound)
 
 maybeToP :: String -> Maybe a -> ExperimentParser a

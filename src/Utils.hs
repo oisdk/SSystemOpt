@@ -33,7 +33,7 @@ insertUnique key val m = case Map.insertLookupWithKey (\_ n _ -> n) key val m of
 insertUniques :: (Ord k, Foldable f) => f (k, a) -> Either [k] (Map k a)
 insertUniques = toEither . runWriter . foldrM f mempty where
   f (k,v) a = case insertUnique k v a of
-    Left d -> tell [d] $> a
+    Left d -> a <$ tell [d]
     Right m -> pure m
   toEither (m,[]) = Right m
   toEither (_,ds) = Left ds
@@ -65,7 +65,7 @@ uniqNames = foldr Stream undefined un' where
   un' = flip (:) <$> [] : un' <*> ['a'..'z']
 
 eitherA :: Alternative f => f a -> f b -> f (Either a b)
-eitherA x y = Left <$> x <|> Right <$> y
+eitherA x y = fmap Left x <|> fmap Right y
 
 toDie :: Either String a -> Shell a
 toDie = either (die . pack) pure
