@@ -19,7 +19,6 @@ module Experiments
 import           Control.Applicative
 import           Control.Lens
 import           Control.Monad.State
-import           Data.Functor
 import           Data.IntMap.Strict          (IntMap)
 import qualified Data.IntMap.Strict          as IntMap
 import           Data.List
