@@ -33,15 +33,17 @@ library
 executable configure
   hs-source-dirs:      app
   main-is:             Configure.hs
-  build-depends:       base >= 4.7 && < 5
-                     , SSystems
-                     , turtle
-                     , text
+  build-depends:       SSystems
+                     , base >= 4.7 && < 5
                      , containers
-                     , mtl
                      , lens
+                     , mtl
+                     , system-filepath >= 0.4
+                     , system-filepath >= 0.4.13.4
                      , taggy >= 0.2
+                     , text
                      , trifecta >= 1.5
+                     , turtle
   default-language:    Haskell2010
   ghc-options:         -Wall
   default-language:    Haskell2010
