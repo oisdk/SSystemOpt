@@ -18,6 +18,7 @@ import qualified Data.Map.Strict      as Map
 import           Data.Text            (pack)
 import           Numeric.Expr
 import           Turtle               (Shell, die)
+import qualified Data.Set as Set
 
 -- | Inserts a value into a map, only if it's not already present
 -- >>> insertUnique "a" "b" (Map.fromList [])
@@ -142,3 +143,10 @@ zipWithA f = foldr2 (\x y z -> (:) <$> f x y <*> z) (pure [])
 
 type NumLearn = Either (VarExpr Double) [Double]
 
+-- |
+-- >>> ordNub [1, 2, 3, 1, 4]
+-- [1,2,3,4]
+ordNub :: (Ord a, Foldable f) => f a -> [a]
+ordNub xs = foldr f (const []) xs Set.empty where
+  f e a p | Set.member e p = a p
+          | otherwise = e : a (Set.insert e p)

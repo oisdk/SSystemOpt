@@ -103,11 +103,11 @@ toSBML s = evalUniques $ do
         -- it pulls any variables out of a given equation, and then
         -- filters out any variables that are parameters, rather than
         -- species.
-        reactantList e =
-          [ specNode vrn
-          | vrs <- getVars e
-          , let vrn = show vrs
-          , Set.member vrn specSet ]
+        reactantList = map specNode
+                     . ordNub
+                     . filter (`Set.member` specSet)
+                     . map show
+                     . getVars
         specNode e =
           elmt "speciesReference" [("species", fromString e)] []
         specSet = foldr Set.insert mempty specNames

@@ -21,10 +21,13 @@ import           Control.Lens
 import           Control.Monad.State
 import           Data.IntMap.Strict          (IntMap)
 import qualified Data.IntMap.Strict          as IntMap
-import           Data.List
+import           Data.List                   hiding (zipWith)
+import qualified Data.Sequence               as Seq
 import           Data.Text.Lazy              (Text)
 import qualified Data.Text.Lazy              as Text
 import           GHC.Exts                    (fromList)
+import           Numeric.Expr
+import           Prelude                     hiding (zipWith)
 import           SSystem
 import           Text.Parser.Char
 import           Text.Parser.Combinators
@@ -32,8 +35,7 @@ import           Text.Parser.Token
 import           Text.Parser.Token.Highlight
 import           Text.Parser.Token.Style
 import           Text.Trifecta.Parser
-import           Utils                       hiding (zipWith)
-import Numeric.Expr
+import           Utils
 
 -- | A Parser for correctly handling the problems on
 -- http://www.cse.chalmers.se/~dag/identification/Benchmarks/Problems.html
@@ -321,7 +323,7 @@ data Bounds = Bounds
 makeFields ''Bounds
 
 toSSystem :: Bounds -> SSystem (Either (VarExpr Double) (Double,Double))
-toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (fromList (map (const (Left 0)) as)) where
+toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (Seq.replicate (length as) (Left 0)) where
   f a b hh gg = SRow (Right a) (Right b) (fromList . map Right $ hh) (fromList . map Right $ gg)
 
 getBounds :: BoundFilling -> ExperimentParser Bounds
@@ -443,7 +445,8 @@ toExperiments env = fmap (Experiment "expt1") . itraverse f where
 problem :: Parser (SSystem (Either (VarExpr Double) (Double,Double)), Experiment)
 problem = getExprParser $ do
   whiteSpace
-  vrs <- some varDecl
+  vrs_ <- some varDecl
+  let vrs = zipWith (set name) uniqNames vrs_
   let vlen = length vrs
   bds <- bounds vlen
   exprs <- some exprDecl

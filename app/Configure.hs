@@ -18,4 +18,4 @@ main = do
                                       <*> optPath "Python-out" 'c' "Path to python output"
   (ss,df) <- maybe exitFailure pure =<< parseFromFile problem (encodeString p)
   T.writeFile (encodeString c) (toExpFormat df)
-  T.writeFile (encodeString s) ((render . toSBML . fmap Right) ss)
+  T.writeFile (encodeString s) ((render . toSBML) ss)
