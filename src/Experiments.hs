@@ -33,6 +33,7 @@ import           Text.Parser.Token.Highlight
 import           Text.Parser.Token.Style
 import           Text.Trifecta.Parser
 import           Utils                       hiding (zipWith)
+import Numeric.Expr
 
 -- | A Parser for correctly handling the problems on
 -- http://www.cse.chalmers.se/~dag/identification/Benchmarks/Problems.html
@@ -319,9 +320,9 @@ data Bounds = Bounds
 
 makeFields ''Bounds
 
-toSSystem :: Bounds -> SSystem (Double,Double)
-toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (fromList []) where
-  f a b hh gg = SRow a b (fromList hh) (fromList gg)
+toSSystem :: Bounds -> SSystem (Either (VarExpr Double) (Double,Double))
+toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (fromList (map (const (Left 0)) as)) where
+  f a b hh gg = SRow (Right a) (Right b) (fromList . map Right $ hh) (fromList . map Right $ gg)
 
 getBounds :: BoundFilling -> ExperimentParser Bounds
 getBounds bf =
@@ -439,7 +440,7 @@ toExperiments env = fmap (Experiment "expt1") . itraverse f where
   ff i x = flip VariableData x <$>
     maybeToP ("Unnamed variable " ++ show i) (preview (varNames . ix i) env)
 
-problem :: Parser (SSystem (Double,Double), Experiment)
+problem :: Parser (SSystem (Either (VarExpr Double) (Double,Double)), Experiment)
 problem = getExprParser $ do
   whiteSpace
   vrs <- some varDecl
