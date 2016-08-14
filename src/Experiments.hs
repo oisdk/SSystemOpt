@@ -323,9 +323,8 @@ data Bounds = Bounds
 makeFields ''Bounds
 
 toSSystem :: Bounds -> SSystem (Either (VarExpr Double) (Double,Double))
-toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith5 f [0..] as bs hhs ggs) (Seq.replicate (length as) (Left 0)) where
-  f i a b hh gg = SRow (Right a) (Right b) (fromList . repl $ hh) (fromList . repl $ gg) where
-    repl = imap (\j -> if j == i then const (Left 0) else Right)
+toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (Seq.replicate (length as) (Left 0)) where
+  f a b hh gg = SRow (Right a) (Right b) (fromList . map Right $ hh) (fromList . map Right $ gg)
 
 getBounds :: BoundFilling -> ExperimentParser Bounds
 getBounds bf =

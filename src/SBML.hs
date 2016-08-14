@@ -6,8 +6,10 @@
 module SBML where
 
 import           Control.Lens
+import           Data.Foldable
 import           Data.Functor
 import qualified Data.Sequence as Seq
+import qualified Data.Set      as Set
 import           Data.String
 import           Numeric.Expr
 import           Prelude       hiding (readFile, writeFile, zipWith)
@@ -29,7 +31,7 @@ toSBML s = evalUniques $ do
   source %= dropStream numSpecs
   -- Each of the following is wrapped in the @Source@ monad, as they
   -- each require unique names in their construction.
-  assignments <- rules
+  reactions <- rctns
   species <- specs
   parameters <- prams
   -- Final SBML
@@ -40,7 +42,7 @@ toSBML s = evalUniques $ do
       , ("xmlns"  , "http://www.sbml.org/sbml/level2/version3") ]
       [ elmt "model"
           [ ("name", "ssystem") ]
-          [units, comps, species, parameters, assignments] ] where
+          [units, comps, species, parameters, reactions] ] where
 
     varStr :: String -> VarExpr Double
     varStr = Var . fromString
@@ -70,19 +72,45 @@ toSBML s = evalUniques $ do
           [ ("compartment", "main")
           , ("id", fromString name)
           , ("name", fromString name)
-          , ("initialConcentration", fromString ivar)] []
+          , ("initialAmount", fromString ivar)] []
 
     -- | The node for declaring the reactions.
-    rules = elmt
-      "listOfRules" [] .
-      zipWith rule specNames <$> eqns where
-        rule name eqn = elmt
-          "assignmentRule"
-          [("variable", fromString name)]
-          [elmt
-              "math"
-              [("xmlns", "http://www.w3.org/1998/Math/MathML")]
-              [mlRep (eqn * varStr "time")]]
+    rctns = elmt
+      "listOfReactions" [] .
+      zipWith reaction specNames <$> eqns where
+        reaction name eqn = elmt
+          "reaction"
+          [("id", fromString $ "diff_" ++ name)]
+          (removeEmpty (reactantList eqn)) where
+            -- | The @removeEmpty@ function is needed because the SBML
+            -- standard doesn't allow for empty nodes. The only node
+            -- which could be empty is the reactant list.
+            removeEmpty [] = [products, kineticLaw]
+            removeEmpty xs =
+              [elmt "listOfReactants" [] xs, products, kineticLaw]
+            products = elmt
+              "listOfProducts" []
+              [elmt "speciesReference" [("species", fromString name)] []]
+            -- | The actual reaction itself. Uses the @Expr@ type's own
+            -- function for converting to MathML
+            kineticLaw = elmt
+              "kineticLaw" []
+              [elmt
+                 "math"
+                 [("xmlns", "http://www.w3.org/1998/Math/MathML")]
+                 [mlRep eqn]]
+        -- | The reactant list is a list of all the species involved.
+        -- it pulls any variables out of a given equation, and then
+        -- filters out any variables that are parameters, rather than
+        -- species.
+        reactantList = map specNode
+                     . ordNub
+                     . filter (`Set.member` specSet)
+                     . map show
+                     . getVars
+        specNode e =
+          elmt "speciesReference" [("species", fromString e)] []
+        specSet = foldr Set.insert mempty specNames
         -- | Replaces any @NumLearn@s with variable names, popped
         -- using the Source monad.
         noHoles = traverse (either pure (const (fmap varStr pop))) s
