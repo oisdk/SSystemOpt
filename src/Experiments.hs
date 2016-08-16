@@ -202,6 +202,18 @@ data BoundFilling = BoundFilling
 
 makeFields ''BoundFilling
 
+data InitialFilling = InitialFilling
+  { _initialFillingAlpha  :: Maybe Double
+  , _initialFillingBeta   :: Maybe Double
+  , _initialFillingG      :: Maybe Double
+  , _initialFillingH      :: Maybe Double
+  , _initialFillingAlphas :: [Maybe Double]
+  , _initialFillingBetas  :: [Maybe Double]
+  , _initialFillingGs     :: [[Maybe Double]]
+  , _initialFillingHs     :: [[Maybe Double]] }
+
+makeFields ''InitialFilling
+
 addLower :: Double -> FilledBound -> Either String FilledBound
 addLower x NoBound = Right (JustLower x)
 addLower x (JustUpper u) = Right (Both x u)
@@ -227,6 +239,43 @@ fillDef nme lns = do
   res <- uses lns adder
   r <- eitherToPT (\e -> "Duplicate default " ++ e ++ " for " ++ nme) res
   lns .= r
+
+fillDefI :: String
+         -> Lens' InitialFilling (Maybe Double)
+         -> StateT InitialFilling ExperimentParser ()
+fillDefI nme lns = use lns >>= \case
+    Just _ -> lift . unexpected $ "Duplicate defaultInitialValue for" ++ nme
+    Nothing -> do
+      lift someSpace
+      lift (prop "defaultInitialValue")
+      res <- lift bound
+      lns ?= res
+
+fillOneDimI :: String
+            -> Lens' InitialFilling [Maybe Double]
+            -> StateT InitialFilling ExperimentParser ()
+fillOneDimI nme lns = do
+  i <- lift ind
+  lift (prop "initialValue")
+  elm <- preuse (lns . ix (i-1))
+  maybeToPT ("Index out of bounds: " ++ show i) elm >>= \case
+    Just _ -> lift . unexpected $ "Duplicate initialValue for" ++ nme ++ "_" ++ show i
+    Nothing -> do
+      val <- lift bound
+      lns . ix (i-1) ?= val
+
+fillTwoDimI :: String
+            -> Lens' InitialFilling [[Maybe Double]]
+            -> StateT InitialFilling ExperimentParser ()
+fillTwoDimI nme lns = do
+  x <- lift ind
+  y <- lift ind
+  elm <- preuse (lns . ix (y-1) . ix (x-1))
+  maybeToPT ("Index out of bounds" ++ show (x,y)) elm >>= \case
+    Just _ -> lift . unexpected . concat $ ["Duplicate initialValue for ", nme, "_", show x, "_", show y]
+    Nothing -> do
+      val <- lift bound
+      lns . ix (y-1) . ix (x-1) ?= val
 
 getBound :: String -> String
          -> ExperimentParser (FilledBound -> Either String FilledBound)
@@ -271,6 +320,14 @@ fillBounds = choice
   , lift (string "g"    ) *> (fillTwoDim "g" gs         <|> fillDef "g" g)
   , lift (string "h"    ) *> (fillTwoDim "h" hs         <|> fillDef "h" h) ]
 
+fillInitials :: StateT InitialFilling ExperimentParser ()
+fillInitials = choice
+  [ lift (string "alpha") *> (fillOneDimI "alpha" alphas <|> fillDefI "alpha" alpha)
+  , lift (string "beta" ) *> (fillOneDimI "beta" betas   <|> fillDefI "beta" beta)
+  , lift (string "g"    ) *> (fillTwoDimI "g" gs         <|> fillDefI "g" g)
+  , lift (string "h"    ) *> (fillTwoDimI "h" hs         <|> fillDefI "h" h) ]
+
+
 -- |
 -- >>> :{
 -- let sampleStr = unlines
@@ -312,6 +369,18 @@ boundFill = execStateT (some fillBounds) . fromSize where
     (replicate n NoBound)
     (replicate n (replicate n NoBound))
     (replicate n (replicate n NoBound))
+
+initialFill :: Int -> ExperimentParser InitialFilling
+initialFill = execStateT (some fillInitials) . fromSize where
+  fromSize n = InitialFilling
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    (replicate n Nothing)
+    (replicate n Nothing)
+    (replicate n (replicate n Nothing))
+    (replicate n (replicate n Nothing))
 
 data Bounds = Bounds
   { _boundsAlphas :: [(Double,Double)]

@@ -72,7 +72,7 @@ toSBML s = evalUniques $ do
           [ ("compartment", "main")
           , ("id", fromString name)
           , ("name", fromString name)
-          , ("initialAmount", fromString ivar)] []
+          , ("initialConcentration", fromString ivar)] []
 
     -- | The node for declaring the reactions.
     rctns = elmt
@@ -90,7 +90,8 @@ toSBML s = evalUniques $ do
               [elmt "listOfReactants" [] xs, products, kineticLaw]
             products = elmt
               "listOfProducts" []
-              [elmt "speciesReference" [("species", fromString name)] []]
+              [ elmt "speciesReference" [("species", fromString sp)] []
+              | sp <- foldr (:) [] specNames, sp /= name ]
             -- | The actual reaction itself. Uses the @Expr@ type's own
             -- function for converting to MathML
             kineticLaw = elmt
@@ -119,5 +120,8 @@ toSBML s = evalUniques $ do
     prams = do
       pnames <- use given
       pure $ elmt "listOfParameters" []
-        [elmt "parameter" [("id", fromString n), ("constant", "true")] []
+        [elmt "parameter" [ ("id", fromString n)
+                          , ("constant", "true")
+                          , ("value", "1")
+                          , ("name", fromString n)] []
         | n <- pnames]

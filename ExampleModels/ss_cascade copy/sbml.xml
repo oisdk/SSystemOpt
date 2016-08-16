@@ -1,1 +1,409 @@
-<sbml xmlns="http://www.sbml.org/sbml/level2/version3" version="3" level="2"><model name="ssystem"><listOfUnitDefinitions><unitDefinition id="sunit"></unitDefinition></listOfUnitDefinitions><listOfCompartments><compartment id="main"></compartment></listOfCompartments><listOfSpecies><species initialAmount="0.0" compartment="main" name="a" id="a"></species><species initialAmount="0.0" compartment="main" name="b" id="b"></species><species initialAmount="0.0" compartment="main" name="c" id="c"></species><species initialAmount="0.0" compartment="main" name="d" id="d"></species></listOfSpecies><listOfParameters><parameter id="ra" constant="true"></parameter><parameter id="qa" constant="true"></parameter><parameter id="pa" constant="true"></parameter><parameter id="oa" constant="true"></parameter><parameter id="na" constant="true"></parameter><parameter id="ma" constant="true"></parameter><parameter id="la" constant="true"></parameter><parameter id="ka" constant="true"></parameter><parameter id="ja" constant="true"></parameter><parameter id="ia" constant="true"></parameter><parameter id="ha" constant="true"></parameter><parameter id="ga" constant="true"></parameter><parameter id="fa" constant="true"></parameter><parameter id="ea" constant="true"></parameter><parameter id="da" constant="true"></parameter><parameter id="ca" constant="true"></parameter><parameter id="ba" constant="true"></parameter><parameter id="aa" constant="true"></parameter><parameter id="z" constant="true"></parameter><parameter id="y" constant="true"></parameter><parameter id="x" constant="true"></parameter><parameter id="w" constant="true"></parameter><parameter id="v" constant="true"></parameter><parameter id="u" constant="true"></parameter><parameter id="t" constant="true"></parameter><parameter id="s" constant="true"></parameter><parameter id="r" constant="true"></parameter><parameter id="q" constant="true"></parameter><parameter id="p" constant="true"></parameter><parameter id="o" constant="true"></parameter><parameter id="n" constant="true"></parameter><parameter id="m" constant="true"></parameter><parameter id="l" constant="true"></parameter><parameter id="k" constant="true"></parameter><parameter id="j" constant="true"></parameter><parameter id="i" constant="true"></parameter><parameter id="h" constant="true"></parameter><parameter id="g" constant="true"></parameter><parameter id="f" constant="true"></parameter><parameter id="e" constant="true"></parameter></listOfParameters><listOfReactions><reaction id="diff_a"><listOfReactants><speciesReference species="a"></speciesReference><speciesReference species="b"></speciesReference><speciesReference species="c"></speciesReference><speciesReference species="d"></speciesReference></listOfReactants><listOfProducts><speciesReference species="a"></speciesReference></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><minus></minus><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>e</ci><apply><power></power><ci>a</ci><ci>g</ci></apply></apply><apply><power></power><ci>b</ci><ci>h</ci></apply></apply><apply><power></power><ci>c</ci><ci>i</ci></apply></apply><apply><power></power><ci>d</ci><ci>j</ci></apply></apply><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>f</ci><apply><power></power><ci>a</ci><ci>k</ci></apply></apply><apply><power></power><ci>b</ci><ci>l</ci></apply></apply><apply><power></power><ci>c</ci><ci>m</ci></apply></apply><apply><power></power><ci>d</ci><ci>n</ci></apply></apply></apply></math></kineticLaw></reaction><reaction id="diff_b"><listOfReactants><speciesReference species="a"></speciesReference><speciesReference species="b"></speciesReference><speciesReference species="c"></speciesReference><speciesReference species="d"></speciesReference></listOfReactants><listOfProducts><speciesReference species="b"></speciesReference></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><minus></minus><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>o</ci><apply><power></power><ci>a</ci><ci>q</ci></apply></apply><apply><power></power><ci>b</ci><ci>r</ci></apply></apply><apply><power></power><ci>c</ci><ci>s</ci></apply></apply><apply><power></power><ci>d</ci><ci>t</ci></apply></apply><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>p</ci><apply><power></power><ci>a</ci><ci>u</ci></apply></apply><apply><power></power><ci>b</ci><ci>v</ci></apply></apply><apply><power></power><ci>c</ci><ci>w</ci></apply></apply><apply><power></power><ci>d</ci><ci>x</ci></apply></apply></apply></math></kineticLaw></reaction><reaction id="diff_c"><listOfReactants><speciesReference species="a"></speciesReference><speciesReference species="b"></speciesReference><speciesReference species="c"></speciesReference><speciesReference species="d"></speciesReference></listOfReactants><listOfProducts><speciesReference species="c"></speciesReference></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><minus></minus><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>y</ci><apply><power></power><ci>a</ci><ci>aa</ci></apply></apply><apply><power></power><ci>b</ci><ci>ba</ci></apply></apply><apply><power></power><ci>c</ci><ci>ca</ci></apply></apply><apply><power></power><ci>d</ci><ci>da</ci></apply></apply><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>z</ci><apply><power></power><ci>a</ci><ci>ea</ci></apply></apply><apply><power></power><ci>b</ci><ci>fa</ci></apply></apply><apply><power></power><ci>c</ci><ci>ga</ci></apply></apply><apply><power></power><ci>d</ci><ci>ha</ci></apply></apply></apply></math></kineticLaw></reaction><reaction id="diff_d"><listOfReactants><speciesReference species="a"></speciesReference><speciesReference species="b"></speciesReference><speciesReference species="c"></speciesReference><speciesReference species="d"></speciesReference></listOfReactants><listOfProducts><speciesReference species="d"></speciesReference></listOfProducts><kineticLaw><math xmlns="http://www.w3.org/1998/Math/MathML"><apply><minus></minus><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>ia</ci><apply><power></power><ci>a</ci><ci>ka</ci></apply></apply><apply><power></power><ci>b</ci><ci>la</ci></apply></apply><apply><power></power><ci>c</ci><ci>ma</ci></apply></apply><apply><power></power><ci>d</ci><ci>na</ci></apply></apply><apply><times></times><apply><times></times><apply><times></times><apply><times></times><ci>ja</ci><apply><power></power><ci>a</ci><ci>oa</ci></apply></apply><apply><power></power><ci>b</ci><ci>pa</ci></apply></apply><apply><power></power><ci>c</ci><ci>qa</ci></apply></apply><apply><power></power><ci>d</ci><ci>ra</ci></apply></apply></apply></math></kineticLaw></reaction></listOfReactions></model></sbml>
+<sbml
+  xmlns="http://www.sbml.org/sbml/level2/version3" version="3" level="2">
+  <model id="exp1">
+    <listOfUnitDefinitions>
+      <unitDefinition id="sunit"></unitDefinition>
+    </listOfUnitDefinitions>
+    <listOfCompartments>
+      <compartment id="main" name="main" size="1"></compartment>
+    </listOfCompartments>
+    <listOfSpecies>
+      <species compartment="main" name="a" initialConcentration="0.0" id="a"></species>
+      <species compartment="main" name="b" initialConcentration="0.0" id="b"></species>
+      <species compartment="main" name="c" initialConcentration="0.0" id="c"></species>
+      <species compartment="main" name="d" initialConcentration="0.0" id="d"></species>
+    </listOfSpecies>
+    <listOfParameters>
+      <parameter value="1" name="ra" id="ra" constant="false"></parameter>
+      <parameter value="1" name="qa" id="qa" constant="false"></parameter>
+      <parameter value="1" name="pa" id="pa" constant="false"></parameter>
+      <parameter value="1" name="oa" id="oa" constant="false"></parameter>
+      <parameter value="1" name="na" id="na" constant="false"></parameter>
+      <parameter value="1" name="ma" id="ma" constant="false"></parameter>
+      <parameter value="1" name="la" id="la" constant="false"></parameter>
+      <parameter value="1" name="ka" id="ka" constant="false"></parameter>
+      <parameter value="1" name="ja" id="ja" constant="false"></parameter>
+      <parameter value="1" name="ia" id="ia" constant="false"></parameter>
+      <parameter value="1" name="ha" id="ha" constant="false"></parameter>
+      <parameter value="1" name="ga" id="ga" constant="false"></parameter>
+      <parameter value="1" name="fa" id="fa" constant="false"></parameter>
+      <parameter value="1" name="ea" id="ea" constant="false"></parameter>
+      <parameter value="1" name="da" id="da" constant="false"></parameter>
+      <parameter value="1" name="ca" id="ca" constant="false"></parameter>
+      <parameter value="1" name="ba" id="ba" constant="false"></parameter>
+      <parameter value="1" name="aa" id="aa" constant="false"></parameter>
+      <parameter value="1" name="z" id="z" constant="false"></parameter>
+      <parameter value="1" name="y" id="y" constant="false"></parameter>
+      <parameter value="1" name="x" id="x" constant="false"></parameter>
+      <parameter value="1" name="w" id="w" constant="false"></parameter>
+      <parameter value="1" name="v" id="v" constant="false"></parameter>
+      <parameter value="1" name="u" id="u" constant="false"></parameter>
+      <parameter value="1" name="t" id="t" constant="false"></parameter>
+      <parameter value="1" name="s" id="s" constant="false"></parameter>
+      <parameter value="1" name="r" id="r" constant="false"></parameter>
+      <parameter value="1" name="q" id="q" constant="false"></parameter>
+      <parameter value="1" name="p" id="p" constant="false"></parameter>
+      <parameter value="1" name="o" id="o" constant="false"></parameter>
+      <parameter value="1" name="n" id="n" constant="false"></parameter>
+      <parameter value="1" name="m" id="m" constant="false"></parameter>
+      <parameter value="1" name="l" id="l" constant="false"></parameter>
+      <parameter value="1" name="k" id="k" constant="false"></parameter>
+      <parameter value="1" name="j" id="j" constant="false"></parameter>
+      <parameter value="1" name="i" id="i" constant="false"></parameter>
+      <parameter value="1" name="h" id="h" constant="false"></parameter>
+      <parameter value="1" name="g" id="g" constant="false"></parameter>
+      <parameter value="1" name="f" id="f" constant="false"></parameter>
+      <parameter value="1" name="e" id="e" constant="false"></parameter>
+    </listOfParameters>
+    <listOfReactions>
+      <reaction id="diff_a">
+        <listOfReactants>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfProducts>
+        <kineticLaw>
+          <math
+            xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <minus></minus>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>e</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>g</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>h</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>i</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>j</ci>
+                </apply>
+              </apply>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>f</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>k</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>l</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>m</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>n</ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="diff_b">
+        <listOfReactants>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfProducts>
+        <kineticLaw>
+          <math
+            xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <minus></minus>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>o</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>q</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>r</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>s</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>t</ci>
+                </apply>
+              </apply>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>p</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>u</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>v</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>w</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>x</ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="diff_c">
+        <listOfReactants>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfProducts>
+        <kineticLaw>
+          <math
+            xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <minus></minus>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>y</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>aa</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>ba</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>ca</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>da</ci>
+                </apply>
+              </apply>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>z</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>ea</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>fa</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>ga</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>ha</ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+      <reaction id="diff_d">
+        <listOfReactants>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+          <speciesReference species="d"></speciesReference>
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="a"></speciesReference>
+          <speciesReference species="b"></speciesReference>
+          <speciesReference species="c"></speciesReference>
+        </listOfProducts>
+        <kineticLaw>
+          <math
+            xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply>
+              <minus></minus>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>ia</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>ka</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>la</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>ma</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>na</ci>
+                </apply>
+              </apply>
+              <apply>
+                <times></times>
+                <apply>
+                  <times></times>
+                  <apply>
+                    <times></times>
+                    <apply>
+                      <times></times>
+                      <ci>ja</ci>
+                      <apply>
+                        <power></power>
+                        <ci>a</ci>
+                        <ci>oa</ci>
+                      </apply>
+                    </apply>
+                    <apply>
+                      <power></power>
+                      <ci>b</ci>
+                      <ci>pa</ci>
+                    </apply>
+                  </apply>
+                  <apply>
+                    <power></power>
+                    <ci>c</ci>
+                    <ci>qa</ci>
+                  </apply>
+                </apply>
+                <apply>
+                  <power></power>
+                  <ci>d</ci>
+                  <ci>ra</ci>
+                </apply>
+              </apply>
+            </apply>
+          </math>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>
