@@ -53,25 +53,6 @@
  
  h has defaultUpperBound =   1.
 
- h_1_4 has lowerBound = 0
- h_2_4 has lowerBound = 0
- h_3_4 has lowerBound = 0
- h_4_4 has lowerBound = 0
-
- g_1_4 has lowerBound = 0
- g_2_4 has lowerBound = 0
- g_3_4 has lowerBound = 0
- g_4_4 has lowerBound = 0
-
- h_1_4 has upperBound = 0
- h_2_4 has upperBound = 0
- h_3_4 has upperBound = 0
- h_4_4 has upperBound = 0
-
- g_1_4 has upperBound = 0
- g_2_4 has upperBound = 0
- g_3_4 has upperBound = 0
- g_4_4 has upperBound = 0
  
  // EXPERIMENTS
  

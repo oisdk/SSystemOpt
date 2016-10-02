@@ -555,7 +555,8 @@ problem = getExprParser $ do
   vrs_ <- some varDecl
   let vrs = zipWith (set name) uniqNames vrs_
   let vlen = length vrs
-  bds <- bounds vlen
+  let inputs = [ Text.pack nm | (Variable _ nm Input) <- vrs ]
+  bds <- bounds (vlen - length inputs)
   exprs <- some exprDecl
   let env =
         ExprEnvironment
@@ -564,7 +565,6 @@ problem = getExprParser $ do
   smpls <- samples (length exprs) vlen
   lsts <- toLists smpls
   expr <- toExperiments env lsts
-  let inputs = map (views name Text.pack) vrs_
   let deps = networks.each.variables %~ filter (views name (`notElem` inputs)) $ expr
   pure (toSSystem bds, deps)
 
