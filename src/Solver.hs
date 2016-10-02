@@ -34,13 +34,13 @@ taylorSource = Text.concat . map (`append` ";\n") . taylorDecls
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
 setup :: Simulation -> Shell Text
--- setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"]
---       . pure
---       . taylorSource
-setup s = do
-  let ts = taylorSource s
-  echo ts
-  (inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure) ts
+setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"]
+      . pure
+      . taylorSource
+-- setup s = do
+--   let ts = taylorSource s
+--   echo ts
+--   (inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure) ts
 
 -- | Given a configuration, prints a the output to the stdout,
 -- after compiling and running.
@@ -53,7 +53,7 @@ runSolver c = do
   let ostr = format fp opath
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
   out <- strict $ inproc ostr [] empty
-  either (pure . const Nothing) (\r -> echo out $> Just r) (parseOut out)
+  either (pure . const Nothing) (pure . Just) (parseOut out)
 
 instance (Floating a, Eq a, Show a) => TaylorCompat (SSystem (VarExpr a)) where
   taylorDecls s = inits : imap eqnmake derivs where
@@ -102,7 +102,7 @@ memo f x = do
 
 -- | Parses the output from a Taylor simulation
 parseOut :: Text -> Either String [[Double]]
-parseOut = (traverse.traverse) (fmap fst . double)
+parseOut = traverse     (fmap init . traverse (fmap fst . double))
          . map Text.words
          . Text.lines
 

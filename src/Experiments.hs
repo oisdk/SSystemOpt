@@ -390,22 +390,22 @@ initialFill = execStateT (some fillInitials) . fromSize where
 data Bounds = Bounds
   { _boundsAlphas :: [(Double,Double)]
   , _boundsBetas  :: [(Double,Double)]
-  , _boundsHs     :: [[(Double,Double)]]
   , _boundsGs     :: [[(Double,Double)]]
+  , _boundsHs     :: [[(Double,Double)]]
   } deriving Show
 
 makeFields ''Bounds
 
 toSSystem :: Bounds -> SSystem (Either (VarExpr Double) (Double,Double))
-toSSystem (Bounds as bs hhs ggs) = SSystem (fromList $ zipWith4 f as bs hhs ggs) (Seq.replicate (length as) (Left 0)) where
-  f a b hh gg = SRow (Right a) (Right b) (fromList . map Right $ hh) (fromList . map Right $ gg)
+toSSystem (Bounds as bs ggs hhs) = SSystem (fromList $ zipWith4 f as bs ggs hhs) (Seq.replicate (length as) (Left 0)) where
+  f a b gg hh = SRow (Right a) (Right b) (fromList . map Right $ gg) (fromList . map Right $ hh)
 
 getBounds :: BoundFilling -> ExperimentParser Bounds
 getBounds bf =
   Bounds <$> traverse (conv (bf^.alpha) "alpha") (bf^.alphas)
          <*> traverse (conv (bf^.beta) "beta")  (bf^.betas)
-         <*> (traverse.traverse) (conv (bf^.h) "h") (bf^.hs)
          <*> (traverse.traverse) (conv (bf^.g) "g") (bf^.gs)
+         <*> (traverse.traverse) (conv (bf^.h) "h") (bf^.hs)
   where
     conv _ _ (Both x y) = pure (x,y)
     conv (Both x y) _ NoBound = pure (x,y)
@@ -526,23 +526,6 @@ toExperiments env = fmap (Experiment "expt1") . itraverse f where
   ff i x = flip VariableData x <$>
     maybeToP ("Unnamed variable " ++ show i) (preview (varNames . ix i) env)
 
-problem :: Parser (SSystem (Either (VarExpr Double) (Double,Double)), Experiment)
-problem = getExprParser $ do
-  whiteSpace
-  vrs_ <- some varDecl
-  let vrs = zipWith (set name) uniqNames vrs_
-  let vlen = length vrs
-  bds <- bounds vlen
-  exprs <- some exprDecl
-  let env =
-        ExprEnvironment
-          (map (Text.pack . view name) $ sortOn (view num) exprs)
-          (map (Text.pack . view name) $ sortOn (view num) vrs)
-  smpls <- samples (length exprs) vlen
-  lsts <- toLists smpls
-  expr <- toExperiments env lsts
-  pure (toSSystem bds, expr)
-
 -- | An experiment contains many different entire simulations
 -- of the same system
 data Experiment = Experiment
@@ -560,6 +543,31 @@ data VariableData = VariableData
   { _variableDataName :: Text
   , _variableDataVals :: [VariableDataPoint]
   } deriving Show
+
+makeFields ''Experiment
+makeFields ''Network
+makeFields ''VariableData
+makeFields ''VariableDataPoint
+
+problem :: Parser (SSystem (Either (VarExpr Double) (Double,Double)), Experiment)
+problem = getExprParser $ do
+  whiteSpace
+  vrs_ <- some varDecl
+  let vrs = zipWith (set name) uniqNames vrs_
+  let vlen = length vrs
+  bds <- bounds vlen
+  exprs <- some exprDecl
+  let env =
+        ExprEnvironment
+          (map (Text.pack . view name) $ sortOn (view num) exprs)
+          (map (Text.pack . view name) $ sortOn (view num) vrs)
+  smpls <- samples (length exprs) vlen
+  lsts <- toLists smpls
+  expr <- toExperiments env lsts
+  let inputs = map (views name Text.pack) vrs_
+  let deps = networks.each.variables %~ filter (views name (`notElem` inputs)) $ expr
+  pure (toSSystem bds, deps)
+
 
 instance Pretty VariableData where
   pretty i (VariableData nm dv) =
@@ -626,7 +634,3 @@ toExpFormat (Experiment n ns) = Text.unlines $
       Text.concat ["      ", repr t, ": (", repr v, ", ", repr sd, "),"]
     repr = Text.pack . show
 
-makeFields ''Experiment
-makeFields ''Network
-makeFields ''VariableData
-makeFields ''VariableDataPoint

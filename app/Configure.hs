@@ -28,14 +28,18 @@ main = view $ do
   stepSize <- maybe (liftIO exitFailure) pure (experimentStepSize df)
   let sttime = stopTime df
   let nstps = nsteps df
+  let preds = toPredictors df
   ress <- forM (versions ss) $ \sstm -> do
     let sim = Simulation 0 stepSize (round nstps) 0.001 0.001 sstm
     resp <- responders sim
-    return (sstm, resp)
-  let noMaybs = mapMaybe sequence ress
-  let preds = toPredictors df
-  let best = minimumOn f noMaybs where
-        f (_,v) = rSquare preds v (Vector.map (const 1) v)
+    case resp of
+      Nothing -> pure Nothing
+      Just resp' -> do
+        let (_,rsq) = olsRegress preds resp'
+        liftIO $ print rsq
+        pure (Just (sstm, rsq))
+  let noMaybs = mapMaybe id ress
+  let best = maximumOn snd noMaybs
   liftIO $ print best
   -- liftIO $ print ress
   -- liftIO $ print df
@@ -44,5 +48,5 @@ main = view $ do
   -- T.writeFile (encodeString s) ((render . toSBML) ss)
 
 
-minimumOn :: Ord b => (a -> b) -> [a] -> a
-minimumOn f = minimumBy (comparing f)
+maximumOn :: Ord b => (a -> b) -> [a] -> a
+maximumOn f = maximumBy (comparing f)
