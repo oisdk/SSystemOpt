@@ -78,6 +78,6 @@ main = do
     , "src/Utils.hs"
     , "src/Experiments.hs"
     , "app/Configure.hs"]
-  sbmlFile "ExampleModels/Model1/model.txt" "ExampleModels/Model1/sbml.xml"
-  odeFile "ExampleModels/ss_cascade/experiment.txt" "ExampleModels/ss_cascade/result.txt"
+  -- sbmlFile "ExampleModels/Model1/model.txt" "ExampleModels/Model1/sbml.xml"
+  -- odeFile "ExampleModels/ss_cascade/experiment.txt" "ExampleModels/ss_cascade/result.txt"
   runTests

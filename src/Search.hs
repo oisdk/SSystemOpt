@@ -1,71 +1,82 @@
-{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
-module Search
-       ( search
-       ) where
+module Search where
 
-import           Control.Applicative (liftA2)
+import           Control.Lens
 import           Control.Monad
 import           Data.Foldable
-import           Data.Function       (on)
-import           Data.List           (sortOn)
-import qualified Data.Map            as Map
-import           Utils               hiding (zipWith)
+import           Experiments
+import Data.List
+import Statistics.Matrix (Matrix, fromRowLists)
+import Numeric.Expr
+import SSystem
 
+almostEqual :: Double -> Double -> Bool
+almostEqual x y = abs (x-y) < 0.00001
 
--- eachNext :: Int -> a -> a -> [[a]]
--- eachNext m a b = f m where
---   f 0 = [[]]
---   f n = [ x:xs | x <- [a,b], xs <- f (n-1) ]
+variableDataStepSize :: VariableData -> Maybe Double
+variableDataStepSize vd = vd ^.. (vals.each.time) & equalDiffs almostEqual
 
-eachOf :: [[a]] -> [[a]]
-eachOf = foldr (liftA2 (:)) [[]]
+networkStepSize :: Network -> Maybe Double
+networkStepSize = views variables (concatIfEqual almostEqual <=< traverse variableDataStepSize)
 
-groupWithPos :: Ord a => [a] -> Map.Map a [Integer]
-groupWithPos = foldr f Map.empty . zip [0..] where
-  f (v,k) = Map.alter (Just . maybe [v] (v:)) k
+experimentStepSize :: Experiment -> Maybe Double
+experimentStepSize = views networks (concatIfEqual almostEqual <=< traverse networkStepSize)
 
-searchGrouped :: Map.Map [a] [Integer] -> [[a]]
-searchGrouped = map (map fst . sortOn snd . ((\(h,t) -> map ((,) h) t) =<<)) . eachOf . map (\(h,t) -> map (flip (,) t) h) . Map.assocs
+stopTime :: Experiment -> Double
+stopTime expr = last (head (head (expr^.networks) ^. variables) ^. vals) ^. time
 
-lattice :: Ord a => [[a]] -> [[a]]
-lattice = searchGrouped . groupWithPos
+nsteps :: Experiment -> Double
+nsteps expr = let Just ss = experimentStepSize expr in stopTime expr / ss
 
--- lattice' :: Ord a => [[a]] -> [[a]]
--- lattice' = map (map snd . sortOn fst) . Map.foldrWithKey f [[]] . groupWithPos where
---   f k v b =  [ zip v h ++ t | hs <- (zipWith ((eachNext.length) v) <*> tail) k, h <- hs, t <- b]
+data EqualAccum a
+  = Started
+  | NotEqual
+  | Equal a
 
+-- |
+-- >>> concatIfEqual (==) []
+-- Nothing
+-- >>> concatIfEqual (==) [1]
+-- Just 1
+-- >>> concatIfEqual (==) [1,1]
+-- Just 1
+-- >>> concatIfEqual (==) [1,2]
+-- Nothing
 
-rmse :: [[Double]] -> [[Double]] -> Double
-rmse a b = (sqrt . mean) (zipWith f a b) where
-  f x y = mean $ zipWith (\n m -> sqr (n-m) ) x y
+concatIfEqual :: (Foldable f, Eq a, Show a) => (a -> a -> Bool) -> f a -> Maybe a
+concatIfEqual eq = ext . foldl' f Started where
+  f Started e   = Equal e
+  f NotEqual _  = NotEqual
+  f (Equal a) e
+    | eq e a    = Equal a
+    | otherwise = NotEqual
+  ext (Equal a) = pure a
+  ext Started   = Nothing
+  ext NotEqual  = Nothing
 
-mean :: Foldable f => f Double -> Double
-mean = uncurry (/) . foldl' (\(n,d) e -> (n + e, d + 1)) (0,0)
+-- |
+-- >>> equalDiffs (==) [1..10]
+-- Just 1
+-- >>> equalDiffs (==) [1, 3..11]
+-- Just 2
+-- >>> equalDiffs (==) [1, 3, 4]
+-- Nothing
+-- >>> equalDiffs (==) []
+-- Nothing
+equalDiffs :: (Eq a, Num a, Show a) => (a -> a -> Bool) -> [a] -> Maybe a
+equalDiffs _ [] = Nothing
+equalDiffs eq xs = concatIfEqual eq (zipWith (-) (tail xs) xs)
 
-sqr :: Num a => a -> a
-sqr x = x * x
+toFlatList :: Network -> [Double]
+toFlatList net = join $ transpose $ map (map (view value) . view vals) $ net ^. variables
 
-search :: Monad m
-       => ([Double] -> m (Maybe [[Double]])) -- ^ Simulation function
-       -> [[Double]]                 -- ^ Observed data
-       -> [[Double]]                 -- ^ Parameters
-       -> m (Maybe [Double])
-search sim obs = maybe (pure Nothing) close <=< (minOnA metFnc . lattice) where
-  metFnc = fmap (MaxMaybe . fmap (rmse obs)) . sim
-  close = go [] where
-    go ys [] = pure $ Just ys
-    go ys (x:xs) = maybe (pure Nothing) (`go` xs) =<< prepWith (around x) where
-      around y = minOnA (metFnc . (\h -> ys ++ (h:xs))) [y-0.5, y, y+0.5]
-      prepWith = (fmap.fmap) (\y -> ys ++ [y])
+toPredictors :: Experiment -> Matrix
+toPredictors = fromRowLists . views networks (map toFlatList)
 
-newtype MaxMaybe a = MaxMaybe { getMaxMaybe :: Maybe a
-                              } deriving (Functor, Eq)
-
-instance Ord a => Ord (MaxMaybe a) where
-  compare = cmp `on` getMaxMaybe where
-    cmp Nothing Nothing = EQ
-    cmp (Just a) (Just b) = compare a b
-    cmp (Just _) _ = LT
-    cmp _ (Just _) = GT
+versions :: SSystem (Either (VarExpr Double) (Double,Double)) -> [SSystem (VarExpr Double)]
+versions = traverse (either f g) where
+  f = pure
+  g (l,t) = map Lit [l, l + 0.5 .. t]

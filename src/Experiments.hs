@@ -7,17 +7,10 @@
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
-module Experiments
-  ( Experiment(..)
-  , Network(..)
-  , VariableData(..)
-  , VariableDataPoint(..)
-  , toExpFormat
-  , problem
-  ) where
+module Experiments where
 
 import           Control.Applicative
-import           Control.Lens
+import           Control.Lens                hiding (indexed)
 import           Control.Monad.State
 import           Data.IntMap.Strict          (IntMap)
 import qualified Data.IntMap.Strict          as IntMap
@@ -36,6 +29,9 @@ import           Text.Parser.Token.Highlight
 import           Text.Parser.Token.Style
 import           Text.Trifecta.Parser
 import           Utils
+
+-- $setup
+-- >>> let pTest = parseTest . getExprParser
 
 -- | A Parser for correctly handling the problems on
 -- http://www.cse.chalmers.se/~dag/identification/Benchmarks/Problems.html
@@ -69,15 +65,36 @@ identStyle =
 
 identifier :: ExperimentParser String
 identifier = ident identStyle
+
+-- |
+-- >>> pTest (string "alpha" *> ind) "alpha_1"
+-- 1
+ind :: ExperimentParser Int
+ind = char '_' *> posInt
+
+-- | >>> pTest (indexed "alpha") "alpha_1"
+-- 1
+indexed :: String -> ExperimentParser Int
+indexed s = string s *> char '_' *> posInt
+
+-- | >>> pTest (indexed2 "alpha") "alpha_0_3"
+-- (0,3)
+indexed2 :: String -> ExperimentParser (Int,Int)
+indexed2 s = string s *> char '_' *> ((,) <$> posInt <*> (char '_' *> posInt))
+
 reserved :: String -> ExperimentParser ()
 reserved = reserve identStyle
 
 -- | Parses syntax for declaring a property
--- >>> parseTest (getExprParser (prop "size")) "has  size = "
+-- >>> pTest ( (prop "size")) "has  size = "
 -- ()
 prop :: String -> ExperimentParser ()
 prop n = reserved "has" *> reserved n *> reserved "="
 
+qualify :: ExperimentParser ()
+qualify = reserved "of"
+
+-- | A single sample, as represented in the file to be parsed
 data Sample = Sample
   { _sampleNum           :: Int
   , _sampleExperimentNum :: Int
@@ -86,10 +103,11 @@ data Sample = Sample
   , _sampleSdev          :: [Double]
   } deriving Show
 
-makeFields ''Sample
 
 posInt :: ExperimentParser Int
 posInt = fmap fromInteger natural
+
+makeFields ''Sample
 
 -- |
 -- >>> :{
@@ -98,27 +116,18 @@ posInt = fmap fromInteger natural
 --       , "has time =  0.42000000E+01                                                                                       "
 --       , "has variable_ =   0.1908074706767553E+01  0.3267195980257653E+01  0.5606229424488210E+00  0.7500000000000000E+00 "
 --       , "has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.00000000E+00                             "]
--- in parseTest (getExprParser (sample 4)) sampleStr
+-- in pTest ( (sample 4)) sampleStr
 -- :}
 -- Sample {_sampleNum = 22, _sampleExperimentNum = 1, _sampleTime = 4.2, _sampleVars = [1.908074706767553,3.267195980257653,0.560622942448821,0.75], _sampleSdev = [1.0e-2,1.0e-2,1.0e-2,0.0]}
 sample :: Int -> ExperimentParser Sample
 sample n =
-  Sample <$> (string "sample_" *>
-              posInt)
-         <*> (reserved "of" *>
-              string "experiment_" *>
-              posInt)
-         <*> (prop "time" *>
-              double)
-         <*> (prop "variable_" *>
-              count n double)
-         <*> (reserved "has" *>
-              reserved "sdev" *>
-              reserved "of" *>
-              reserved "variable_" *>
-              reserved "=" *>
-              count n double)
+  Sample <$> indexed "sample"
+         <*> (qualify *> indexed "experiment")
+         <*> (prop "time" *> double)
+         <*> (prop "variable_" *> count n double)
+         <*> foldr ((*>) . reserved) (count n double) ["has","sdev","of","variable_","="]
 
+-- | A variable declaration, as declared in the file to be parsed
 data Variable = Variable
   { _variableNum  :: Int
   , _variableName :: String
@@ -134,14 +143,15 @@ dependency = Dependent <$ reserved "dependent"
          <|> Input     <$ reserved "inputVariable"
 
 -- |
--- >>> parseTest (getExprParser varDecl) "variable_2 has name = x2 is dependent"
+-- >>> pTest ( varDecl) "variable_2 has name = x2 is dependent"
 -- Variable {_variableNum = 2, _variableName = "x2", _variableDep = Dependent}
 varDecl :: ExperimentParser Variable
 varDecl =
-  Variable <$> (string "variable_" *> posInt)
+  Variable <$> indexed "variable"
            <*> (prop "name" *> identifier)
            <*> (reserved "is" *> dependency)
 
+-- | An experiment declaration, as declared in the file to be parsed
 data ExprDecl = ExprDecl
   { _exprDeclNum    :: Int
   , _exprDeclName   :: String
@@ -157,28 +167,22 @@ dataVal = Perfect   <$ reserved "perfectData"
       <|> Imperfect <$ reserved "imperfectData"
 
 -- |
--- >>> parseTest (getExprParser exprDecl) "experiment_1 has name = exp1 has perfectData"
+-- >>> pTest ( exprDecl) "experiment_1 has name = exp1 has perfectData"
 -- ExprDecl {_exprDeclNum = 1, _exprDeclName = "exp1", _exprDeclDatVal = Perfect}
 exprDecl :: ExperimentParser ExprDecl
 exprDecl =
-  ExprDecl <$> (string "experiment_" *> posInt)
+  ExprDecl <$> indexed "experiment"
            <*> (prop "name" *> identifier)
            <*> (reserved "has" *> dataVal)
 
 -- |
--- >>> parseTest (getExprParser bound) "0."
+-- >>> pTest ( bound) "0."
 -- 0.0
--- >>> parseTest (getExprParser bound) "-20."
+-- >>> pTest ( bound) "-20."
 -- -20.0
 bound :: ExperimentParser Double
 bound = (try double <|> fmap fromInteger integer) <*
         token (skipOptional (char '.'))
-
--- |
--- >>> parseTest (getExprParser $ string "alpha" *> ind) "alpha_1"
--- 1
-ind :: ExperimentParser Int
-ind = char '_' *> posInt
 
 data FilledBound =
   NoBound |
@@ -210,7 +214,8 @@ data InitialFilling = InitialFilling
   , _initialFillingAlphas :: [Maybe Double]
   , _initialFillingBetas  :: [Maybe Double]
   , _initialFillingGs     :: [[Maybe Double]]
-  , _initialFillingHs     :: [[Maybe Double]] }
+  , _initialFillingHs     :: [[Maybe Double]]
+  } deriving Show
 
 makeFields ''InitialFilling
 
@@ -355,7 +360,7 @@ fillInitials = choice
 --         , " h_3_3 has lowerBound =  1.0E-15"
 --         , " "
 --         , " h has defaultUpperBound =   4." ]
--- in parseTest (getExprParser (boundFill 4)) sampleStr
+-- in pTest ( (boundFill 4)) sampleStr
 -- :}
 -- BoundFilling {_boundFillingAlpha = Both 20.0 0.0, _boundFillingBeta = Both 0.0 20.0, _boundFillingG = Both (-4.0) 4.0, _boundFillingH = Both (-4.0) 4.0, _boundFillingAlphas = [NoBound,NoBound,NoBound,NoBound], _boundFillingBetas = [NoBound,NoBound,NoBound,NoBound], _boundFillingGs = [[Both 0.0 0.0,NoBound,NoBound,NoBound],[NoBound,Both 0.0 0.0,NoBound,NoBound],[NoBound,NoBound,Both 0.0 0.0,NoBound],[NoBound,NoBound,NoBound,NoBound]], _boundFillingHs = [[JustLower 1.0e-15,NoBound,NoBound,NoBound],[NoBound,JustLower 1.0e-15,NoBound,NoBound],[NoBound,NoBound,JustLower 1.0e-15,NoBound],[NoBound,NoBound,NoBound,NoBound]]}
 boundFill :: Int -> ExperimentParser BoundFilling
@@ -437,12 +442,13 @@ getBounds bf =
 --         , " h_3_3 has lowerBound =  1.0E-15"
 --         , " "
 --         , " h has defaultUpperBound =   4." ]
--- in parseTest (getExprParser (bounds 4)) sampleStr
+-- in pTest ( (bounds 4)) sampleStr
 -- :}
 -- Bounds {_boundsAlphas = [(20.0,0.0),(20.0,0.0),(20.0,0.0),(20.0,0.0)], _boundsBetas = [(0.0,20.0),(0.0,20.0),(0.0,20.0),(0.0,20.0)], _boundsHs = [[(1.0e-15,4.0),(-4.0,4.0),(-4.0,4.0),(-4.0,4.0)],[(-4.0,4.0),(1.0e-15,4.0),(-4.0,4.0),(-4.0,4.0)],[(-4.0,4.0),(-4.0,4.0),(1.0e-15,4.0),(-4.0,4.0)],[(-4.0,4.0),(-4.0,4.0),(-4.0,4.0),(-4.0,4.0)]], _boundsGs = [[(0.0,0.0),(-4.0,4.0),(-4.0,4.0),(-4.0,4.0)],[(-4.0,4.0),(0.0,0.0),(-4.0,4.0),(-4.0,4.0)],[(-4.0,4.0),(-4.0,4.0),(0.0,0.0),(-4.0,4.0)],[(-4.0,4.0),(-4.0,4.0),(-4.0,4.0),(-4.0,4.0)]]}
 bounds :: Int -> ExperimentParser Bounds
 bounds = getBounds <=< boundFill
 
+-- | A single variable's data
 data DataPoint = DataPoint
   { _dataPointTime ::  Double
   , _dataPointVars :: [Double]
@@ -472,16 +478,25 @@ updSample n = do
 --       , "has time =  0.42000000E+01"
 --       , "has variable_ =   0.1908074706767553E+01  0.3267195980257653E+01  0.5606229424488210E+00  0.7500000000000000E+00"
 --       , "has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.00000000E+00"]
--- in parseTest (getExprParser (samples 1 4)) sampleStr
+-- in pTest ( (samples 1 4)) sampleStr
 -- :}
 -- fromList [(1,fromList [(22,DataPoint {_dataPointTime = 4.2, _dataPointVars = [1.908074706767553,3.267195980257653,0.560622942448821,0.75], _dataPointSdev = [1.0e-2,1.0e-2,1.0e-2,0.0]})])]
 samples :: Int -> Int -> ExperimentParser (IntMap (IntMap DataPoint))
 samples n i = execStateT (some $ updSample i) (IntMap.fromList [(j,mempty) | j <- [1..n]])
 
+class Pretty a where
+  pretty :: Int -> a -> [String]
+
+-- | A single data point for a single variable
 data VariableDataPoint = VariableDataPoint
   { _variableDataPointTime  :: Double
   , _variableDataPointValue :: Double
-  , _variableDataPointSdev  :: Double }
+  , _variableDataPointSdev  :: Double
+  } deriving Show
+
+instance Pretty VariableDataPoint where
+  pretty i (VariableDataPoint tm vl sd) =
+    [concat [replicate i ' ', "time: ", show tm, ", value: ", show vl, ", sdev: ", show sd]]
 
 toVarDataPoint :: DataPoint -> [VariableDataPoint]
 toVarDataPoint (DataPoint dpt dpv dpd) = zipWith (VariableDataPoint dpt) dpv dpd
@@ -528,18 +543,38 @@ problem = getExprParser $ do
   expr <- toExperiments env lsts
   pure (toSSystem bds, expr)
 
+-- | An experiment contains many different entire simulations
+-- of the same system
 data Experiment = Experiment
   { _experimentName     :: Text
-  , _experimentNetworks :: [Network] }
+  , _experimentNetworks :: [Network]}
 
+-- | A single simulation
 data Network = Network
   { _networkName      :: Text
-  , _networkVariables :: [VariableData] }
+  , _networkVariables :: [VariableData]
+  } deriving Show
 
+-- | In a single simulation, the information on one variable
 data VariableData = VariableData
   { _variableDataName :: Text
-  , _variableDataVals :: [VariableDataPoint] }
+  , _variableDataVals :: [VariableDataPoint]
+  } deriving Show
 
+instance Pretty VariableData where
+  pretty i (VariableData nm dv) =
+    (replicate i ' ' ++ Text.unpack nm) : (pretty (i + 4) =<< dv)
+
+instance Pretty Network where
+  pretty i (Network nm vbs) =
+    (replicate i ' ' ++ Text.unpack nm) : (pretty (i + 4) =<< vbs)
+
+instance Pretty Experiment where
+  pretty i (Experiment nm nns) =
+    (replicate i ' ' ++ Text.unpack nm) : (pretty (i + 4) =<< nns)
+
+instance Show Experiment where
+  show = unlines . pretty 0
 
 -- | Converts an experiment to the required python file
 -- format.

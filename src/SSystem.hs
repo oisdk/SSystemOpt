@@ -33,9 +33,9 @@ data SSystem a = SSystem
 makeLenses ''SSystem
 
 toEqns :: (Floating a, Eq a) => (Int -> a) -> SSystem a -> Seq a
-toEqns toNum (SSystem s _) = fmap f s where
-  f (SRow pf nf pe ne) = toEqn pf pe `subS` toEqn nf ne where
-    toEqn facs exps = foldl' mulS facs (imap (powS.toNum) exps)
+toEqns toNum (SSystem s _) = imap f s where
+  f i (SRow pf nf pe ne) = toEqn pf pe `subS` toEqn nf ne where
+    toEqn facs exps = foldl' mulS facs (imap (\j x -> if i == j then 1 else powS (toNum j) x)  exps)
     powS _ 0 = 1
     powS 1 _ = 1
     powS x 1 = x

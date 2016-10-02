@@ -2,34 +2,29 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Solver
-       ( simMemo
-       , runMemo
-       , parseOut
-       , Simulation(..)
-       , simOptions
-       , withParams
-       , runSolver
-       ) where
+module Solver where
 
-import           Control.Lens        hiding (strict)
+import           Control.Lens            hiding (strict)
 import           Control.Monad.State
 import           Data.Functor
-import           Data.Map.Strict     (Map)
+import           Data.Map.Strict         (Map)
 import           Data.Maybe
-import qualified Data.Sequence       as Seq
-import           Data.Text           (append, intercalate)
-import qualified Data.Text           as Text
-import           Data.Text.Read      (double)
+import           Data.Monoid
+import qualified Data.Sequence           as Seq
+import           Data.Text               (append, intercalate)
+import qualified Data.Text               as Text
+import           Data.Text.Read          (double)
+import qualified Data.Vector.Unboxed     as Vec
 import           GHC.Exts
 import           Numeric.Expr
-import           Prelude             hiding (FilePath, concat)
+import           Prelude                 hiding (FilePath, concat)
 import           SSystem
-import           Turtle              (Parser, Shell, Text, echo, empty, format,
-                                      fp, inproc, mktempdir, mktempfile,
-                                      optDouble, optInt, output, procs, repr,
-                                      strict, using)
-import           Utils               hiding (zipWith)
+import           Statistics.Matrix.Types
+import           Turtle                  (Parser, Shell, Text, echo, empty,
+                                          format, fp, inproc, mktempdir,
+                                          mktempfile, optDouble, optInt, output,
+                                          procs, repr, strict, using)
+import           Utils                   hiding (zipWith)
 -- | A typeclass for types with a representation in Taylor source code
 class TaylorCompat a where taylorDecls :: a -> [Text]
 
@@ -39,13 +34,13 @@ taylorSource = Text.concat . map (`append` ";\n") . taylorDecls
 -- | Uses taylor to generate a solver (uncompiled, in c code)
 -- for a given configuration
 setup :: Simulation -> Shell Text
-setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"]
-      . pure
-      . taylorSource
--- setup s = do
---   let ts = taylorSource s
---   echo ts
---   (inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure) ts
+-- setup = inproc "taylor" ["-sqrt", "-step", "0", "-main"]
+--       . pure
+--       . taylorSource
+setup s = do
+  let ts = taylorSource s
+  echo ts
+  (inproc "taylor" ["-sqrt", "-step", "0", "-main"] . pure) ts
 
 -- | Given a configuration, prints a the output to the stdout,
 -- after compiling and running.
@@ -58,14 +53,15 @@ runSolver c = do
   let ostr = format fp opath
   procs "gcc" ["-O3", "-o", ostr, format fp cpath] empty
   out <- strict $ inproc ostr [] empty
-  either (const $ echo out $> Nothing) (pure . Just) (parseOut out)
+  either (pure . const Nothing) (\r -> echo out $> Just r) (parseOut out)
 
-instance (Floating a, Eq a, Show a) => TaylorCompat (SSystem a) where
-  taylorDecls s = inits : map repr derivs where
+instance (Floating a, Eq a, Show a) => TaylorCompat (SSystem (VarExpr a)) where
+  taylorDecls s = inits : imap eqnmake derivs where
     inits = "initial_values=" `append` intercalate ", " (s^..initials.each.to repr)
     derivs :: [VarExpr a]
-    derivs = foldr (:) [] $ toEqns (Var . fromString . Seq.index varNames) (fmap Lit s)
+    derivs = foldr (:) [] $ toEqns (Var . fromString . Seq.index varNames) s
     varNames = Seq.fromList (takeStream (size s) uniqNames)
+    eqnmake i eqn = "diff(" <> fromString (Seq.index varNames i) <> ",t) = " <> repr eqn
 
 -- | The full information needed to run a Taylor simulation
 data Simulation =
@@ -74,7 +70,7 @@ data Simulation =
              , nSteps    :: Int
              , absTol    :: Double
              , relTol    :: Double
-             , system    :: SSystem Double}
+             , system    :: SSystem (VarExpr Double)}
 
 
 instance TaylorCompat Simulation where
@@ -109,6 +105,9 @@ parseOut :: Text -> Either String [[Double]]
 parseOut = (traverse.traverse) (fmap fst . double)
          . map Text.words
          . Text.lines
+
+responders :: Simulation -> Shell (Maybe Vector)
+responders = (fmap.fmap) (Vec.fromList . join) . runSolver
 
 simMemo :: ([Double] -> Shell Simulation)
         -> [Double]

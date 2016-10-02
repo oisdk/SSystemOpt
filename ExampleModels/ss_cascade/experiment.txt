@@ -8,30 +8,70 @@
  
 // MODEL SPACE
  
- alpha has defaultLowerBound =  0.
+ alpha has defaultLowerBound =  0.5
+
+ alpha_1 has lowerBound = 10
+ alpha_1 has upperBound = 10
+
+ alpha_2 has lowerBound = 2
+ alpha_2 has upperBound = 2
+
+ alpha_3 has lowerBound = 3
+ alpha_3 has upperBound = 3
+
+
+
+  beta_1 has lowerBound = 5
+  beta_1 has upperBound = 5
+
+  beta_2 has lowerBound = 1.44
+  beta_2 has upperBound = 1.44
+
+  beta_3 has lowerBound = 7.2
+  beta_3 has upperBound = 7.2
  
- alpha has defaultUpperBound =  20.
+ alpha has defaultUpperBound =  1
  
- beta has defaultLowerBound =  0.
+ beta has defaultLowerBound =  0.5
  
- beta has defaultUpperBound =  20.
+ beta has defaultUpperBound =  1
  
- g has defaultLowerBound =  -4.
+ g has defaultLowerBound =  0
  g_1_1 has lowerBound =  0.
  g_2_2 has lowerBound =  0.
  g_3_3 has lowerBound =  0.
  
- g has defaultUpperBound =   4.
+ g has defaultUpperBound =   1.
  g_1_1 has upperBound =  0.
  g_2_2 has upperBound =  0.
  g_3_3 has upperBound =  0.
  
- h has defaultLowerBound =  -4.
+ h has defaultLowerBound =  0
  h_1_1 has lowerBound =  1.0E-15
  h_2_2 has lowerBound =  1.0E-15
  h_3_3 has lowerBound =  1.0E-15
  
- h has defaultUpperBound =   4.
+ h has defaultUpperBound =   1.
+
+ h_1_4 has lowerBound = 0
+ h_2_4 has lowerBound = 0
+ h_3_4 has lowerBound = 0
+ h_4_4 has lowerBound = 0
+
+ g_1_4 has lowerBound = 0
+ g_2_4 has lowerBound = 0
+ g_3_4 has lowerBound = 0
+ g_4_4 has lowerBound = 0
+
+ h_1_4 has upperBound = 0
+ h_2_4 has upperBound = 0
+ h_3_4 has upperBound = 0
+ h_4_4 has upperBound = 0
+
+ g_1_4 has upperBound = 0
+ g_2_4 has upperBound = 0
+ g_3_4 has upperBound = 0
+ g_4_4 has upperBound = 0
  
  // EXPERIMENTS
  
