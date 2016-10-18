@@ -98,19 +98,10 @@ printState = do
 oneRound :: Search ()
 oneRound = do
   inds <- uses (curSystem.size) (enumFromTo 0 . pred)
-  syst <- use curSystem
-  for_ inds $ \i -> do
-    tryAdd 5 (alphal i)
-    tryAdd 5 (betal  i)
-  nexts <- for inds $ \i -> for inds $ \j -> do
+  for_ inds $ \i -> for_ inds $ \j -> do
       printState
-      pos <- vary syst (\e -> [e-1,e+1]) (posExpl i j)
-      neg <- vary syst (\e -> [e-1,e+1]) (negExpl i j)
-      printState
-      pure (catMaybes [pos,neg])
-  for_ (maximumOn snd . concat . concat $ nexts) $ \(best,bscore) -> do
-    curSystem .= best
-    bestScore .= bscore
+      tryAdd 1 (posExpl i j)
+      tryAdd 1 (negExpl i j)
   printState
 
 basicFind :: String -> IO ()
@@ -125,4 +116,4 @@ basicFind f = do
 exampleFind :: IO ()
 exampleFind = do
   setErrorHandlerOff
-  basicFind "/Users/oisinkidney/Developer/NatSSystemOpt/data/ss_5genes.txt"
+  basicFind "data/ss_5genes.txt"
