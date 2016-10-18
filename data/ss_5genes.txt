@@ -1,0 +1,87 @@
+ // VARIABLES
+ 
+ variable_1 has name = x1 is dependent
+ variable_2 has name = x2 is dependent
+ variable_3 has name = x3 is dependent
+ variable_4 has name = x4 is dependent
+ variable_5 has name = x5 is dependent
+ 
+ 
+// MODEL SPACE
+ 
+ alpha has defaultLowerBound =  0.
+ 
+ alpha has defaultUpperBound =  15.
+ 
+ beta has defaultLowerBound =  0.
+ 
+ beta has defaultUpperBound =  15.
+ 
+ g has defaultLowerBound =  -3.
+ 
+ g has defaultUpperBound =   3.
+ 
+ h has defaultLowerBound =  -3.
+ 
+ h has defaultUpperBound =   3.
+ 
+ 
+ 
+ 
+ // EXPERIMENTS
+ 
+ experiment_1 has name = exp1 has perfectData
+ experiment_2 has name = exp2 has perfectData
+ experiment_3 has name = exp3 has perfectData
+ experiment_4 has name = exp4 has perfectData
+ experiment_5 has name = exp5 has perfectData
+ experiment_6 has name = exp6 has perfectData
+ experiment_7 has name = exp7 has perfectData
+ experiment_8 has name = exp8 has perfectData
+ experiment_9 has name = exp9 has perfectData
+ experiment_10 has name = exp10 has perfectData
+ 
+ 
+// EXPERIMENT   1
+ 
+ 
+ sample_1 of experiment_1
+ has time =  0.00000000E+00
+ has variable_ =   0.7000000000000000E+00  0.1200000000000000E+00  0.1400000000000000E+00  0.1600000000000000E+00  0.1800000000000000E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+ sample_2 of experiment_1
+ has time =  0.50000000E-01
+ has variable_ =   0.1116768935104508E+01  0.5287860850842462E+00  0.9744637171535299E+00  0.1088858282607377E+01  0.4015824744726256E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+ sample_3 of experiment_1
+ has time =  0.10000000E+00
+ has variable_ =   0.9667738069022127E+00  0.8272050550113534E+00  0.9938131401026441E+00  0.1092565455263378E+01  0.8241204764010462E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+ sample_4 of experiment_1
+ has time =  0.15000000E+00
+ has variable_ =   0.8393663845561314E+00  0.8627785572264285E+00  0.9980628963231715E+00  0.9919332765770071E+00  0.9522443165906026E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+ sample_5 of experiment_1
+ has time =  0.20000000E+00
+ has variable_ =   0.7765170690212361E+00  0.8274648387101311E+00  0.9993963882751241E+00  0.9434217815181286E+00  0.9572291194084775E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+ sample_6 of experiment_1
+ has time =  0.25000000E+00
+ has variable_ =   0.7499212145142842E+00  0.7905410385192748E+00  0.9998243677925840E+00  0.9281007513370556E+00  0.9423544336018260E+00
+ has sdev of variable_ =  0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01 0.10000000E-01
+ 
+
+// INITIAL SOLUTION
+ 
+ alpha has defaultInitialValue = 1
+ 
+ beta has defaultInitialValue = 1
+ 
+ g has defaultInitialValue = 0
+ 
+ h has defaultInitialValue = 0

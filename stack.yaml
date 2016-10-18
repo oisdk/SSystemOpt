@@ -1,17 +1,6 @@
-resolver: lts-6.10
-packages:
-- '.'
-- location:
-    git: https://github.com/oisdk/Expr.git
-    commit: 42c8d1dc9daf7d4d2117a663e45bd4958d73001e
-- location:
-    git: https://github.com/ekmett/recursion-schemes.git
-    commit: cf42f2ace35ca09a8ab489538e9493f8333bc0ec
-- location:
-    git: https://github.com/oisdk/recursion-schemes-extras.git
-    commit: cf40fb2cf971326a5929cddae223770bd256df86
-extra-deps:
-- taggy-0.2.0
-- taggy-lens-0.1.2
 flags: {}
 extra-package-dbs: []
+packages:
+- '.'
+extra-deps: []
+resolver: lts-7.2
